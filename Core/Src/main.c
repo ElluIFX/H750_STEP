@@ -99,7 +99,7 @@ int main(void) {
   Enable_Uart_O_Control(&huart1, &uart_1);
   Step_Init(&step_1, &htim1, &htim2, TIM_CHANNEL_1, STEP_DIR_GPIO_Port,
             STEP_DIR_Pin);
-  Step_Set_Speed(&step_1, 360);
+  Step_Set_Speed(&step_1, 1200);
   Scheduler_Init();  // initialize scheduler
   LOG_I("--- System running ---");
   RGB(0, 1, 0);
@@ -202,6 +202,12 @@ void Task_Uart_Controller(void) {
         if (sscanf(RX_DATA(uart_1), "g:%lf", &temp) == 1) {
           Step_Rotate_Abs(&step_1, temp);
         }
+        break;
+      case '0':
+        Step_Set_Angle(&step_1, 0);
+        break;
+      case 'p':
+        Step_Stop(&step_1);
         break;
       default:
         LOG_W("Unknown command");

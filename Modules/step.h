@@ -16,7 +16,7 @@
 /****************** 常量定义 ******************/
 // 电机参数相关
 #define STEP_BASE_PULSE 200  // 零细分脉冲数
-#define STEP_SUBDIVISION 16  // 细分倍数
+#define STEP_SUBDIVISION 32  // 细分倍数
 #define STEP_PULSE_PER_ROUND (STEP_BASE_PULSE * STEP_SUBDIVISION)  // 一圈脉冲数
 #define STEP_DIR_LOGIC_REVERSE \
   0  // 默认逻辑下, 顺时针转动时DIR为高电平, 置1可反转
@@ -24,6 +24,7 @@
 // 功能相关
 #define STEP_TIM_BASE_CLK 240000000  // 定时器时钟频率
 #define STEP_PWM_MAX_FREQ 20000      // PWM最大频率(防止丢步)
+#define STEP_SLAVE_TIM_MAX_CNT 4294967295  // 从定时器最大计数值 (16bit=65535 32bit=4294967295)
 
 /****************** 数据类型定义 ******************/
 
@@ -33,6 +34,8 @@ typedef struct {                 // 步进电机控制结构体
   double angleTarget;            // 目标角度, deg
   uint8_t rotating;              // 是否正在转动
   uint8_t dir;                   // 转动方向 (0:逆时针, 1:顺时针)
+  uint32_t slaveTimReload;       // 从定时器重装载值
+  uint32_t slaveTimITCnt;        // 从定时器溢出中断计数
   TIM_HandleTypeDef *timMaster;  // 主定时器句柄(用于PWM输出)
   TIM_HandleTypeDef *timSlave;   // 从定时器句柄(用于脉冲计数)
   uint32_t timMasterCh;          // 主定时器通道
@@ -51,4 +54,5 @@ void Step_Rotate(step_ctrl_t *step, double angle);
 void Step_Rotate_Abs(step_ctrl_t *step, double angle);
 void Step_Set_Angle(step_ctrl_t *step, double angle);
 double Step_Get_Angle(step_ctrl_t *step);
+void Step_Stop(step_ctrl_t *step);
 #endif

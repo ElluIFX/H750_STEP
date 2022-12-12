@@ -29,6 +29,8 @@ void Step_Init(step_ctrl_t *step, TIM_HandleTypeDef *timMaster,
   step->angleTarget = 0;
   step->rotating = 0;
   step->dir = 0;
+  step->slaveTimReload = 0;
+  step->slaveTimITCnt = 0;
   step->timMaster = timMaster;
   step->timSlave = timSlave;
   step->timMasterCh = timMasterCh;
@@ -78,12 +80,19 @@ void Step_IT_Handler(step_ctrl_t *step, TIM_HandleTypeDef *htim) {
   if (htim->Instance == step->timSlave->Instance) {
     if (__HAL_TIM_GET_FLAG(step->timSlave, TIM_FLAG_CC1) != RESET) {
       __HAL_TIM_CLEAR_FLAG(step->timSlave, TIM_FLAG_CC1);
-      HAL_TIM_PWM_Stop_IT(step->timMaster, step->timMasterCh);
-      HAL_TIM_Base_Stop_IT(step->timSlave);
-      __HAL_TIM_SET_COUNTER(step->timSlave, 0);
-      step->rotating = 0;
-      step->angle = step->angleTarget;
-      LOG_D("Step rotate done");
+      if (step->slaveTimITCnt == 0) {
+        HAL_TIM_PWM_Stop_IT(step->timMaster, step->timMasterCh);
+        HAL_TIM_Base_Stop_IT(step->timSlave);
+        step->rotating = 0;
+        step->angle = step->angleTarget;
+        LOG_D("Step stopped");
+      } else {
+        step->slaveTimITCnt--;
+        LOG_D("slaveTimITCnt-- = %d", step->slaveTimITCnt);
+        if (step->slaveTimITCnt == 0) {
+          __HAL_TIM_SET_AUTORELOAD(step->timSlave, step->slaveTimReload);
+        }
+      }
     }
   }
 }
@@ -98,11 +107,6 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
     LOG_E("Step_Rotate: step is rotating");
     return;
   }
-  if (angle == 0) {
-    LOG_E("Step_Rotate: angle is 0");
-    return;
-  }
-  step->angleTarget = step->angle + angle;
   step->dir = angle > 0 ? 1 : 0;
 #if STEP_DIR_LOGIC_REVERSE
   HAL_GPIO_WritePin(step->dirPort, step->dirPin,
@@ -112,13 +116,25 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
                     step->dir ? GPIO_PIN_SET : GPIO_PIN_RESET);
 #endif
   angle = fabs(angle);
-  uint16_t targetPulse = angle * STEP_PULSE_PER_ROUND / 360;
+  uint32_t targetPulse = angle * STEP_PULSE_PER_ROUND / 360;
   if (targetPulse < 2) {
     LOG_E("Step_Rotate: targetPulse is too small");
     return;
   }
-  LOG_D("Step_Rotate: angle = %f, targetPulse = %d, dir = %d", angle,
-        targetPulse, step->dir);
+  // step->angleTarget = step->angle + angle; // 存在累加误差
+  step->angleTarget = (double)targetPulse * 360 / STEP_PULSE_PER_ROUND;
+  step->angleTarget = step->dir ? step->angle + step->angleTarget
+                                : step->angle - step->angleTarget;
+  LOG_D(
+      "Step_Rotate: angle = %f, targetPulse = %ld, dir = %d, angleTarget = %f",
+      angle, targetPulse, step->dir, step->angleTarget);
+  step->slaveTimITCnt = targetPulse / (STEP_SLAVE_TIM_MAX_CNT + 1);
+  if (step->slaveTimITCnt > 0) {
+    step->slaveTimReload = targetPulse % (STEP_SLAVE_TIM_MAX_CNT + 1);
+    targetPulse = STEP_SLAVE_TIM_MAX_CNT;
+    LOG_D("Step_Rotate: slaveTimITCnt = %d, slaveTimReload = %d",
+          step->slaveTimITCnt, step->slaveTimReload);
+  }
   __HAL_TIM_SET_COUNTER(step->timMaster, 0);
   __HAL_TIM_SET_COUNTER(step->timSlave, 0);
   __HAL_TIM_SET_AUTORELOAD(step->timSlave, targetPulse - 1);
@@ -146,11 +162,10 @@ void Step_Rotate_Abs(step_ctrl_t *step, double angle) {
 void Step_Stop(step_ctrl_t *step) {
   HAL_TIM_PWM_Stop_IT(step->timMaster, step->timMasterCh);
   HAL_TIM_Base_Stop_IT(step->timSlave);
+  step->angle = Step_Get_Angle(step);
   __HAL_TIM_SET_COUNTER(step->timSlave, 0);
   step->rotating = 0;
-  double progress = (double)__HAL_TIM_GET_COUNTER(step->timSlave) /
-                    (double)__HAL_TIM_GET_AUTORELOAD(step->timSlave);
-  step->angle = (step->angleTarget - step->angle) * progress + step->angle;
+  LOG_D("Step stopped at %f", step->angle);
 }
 
 double Step_Get_Angle(step_ctrl_t *step) {

@@ -16,7 +16,7 @@
 // private define
 #define DEBUG_UART_PORT huart1  // 调试串口
 #define ENABLE_LOG 1            // 是否输出调试信息
-#define ENABLE_LOG_TIMESTAMP 1  // 调试信息是否添加时间戳
+#define ENABLE_LOG_TIMESTAMP 0  // 调试信息是否添加时间戳
 #define ENABLE_LOG_COLOR 1      // 调试信息是否按等级添加颜色
 
 #define printf(...) printft(&DEBUG_UART_PORT, __VA_ARGS__)
