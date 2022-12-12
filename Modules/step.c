@@ -45,7 +45,7 @@ void Step_Init(step_ctrl_t *step, TIM_HandleTypeDef *timMaster,
  */
 void Step_Set_Speed(step_ctrl_t *step, double speed) {
   if (speed == 0) {
-    printf("[WARN] Step_Set_Speed: speed is 0\n");
+    printf("[ERROR] Step_Set_Speed: speed is 0\n");
     return;
   }
   double pulsePerSec = speed / 360 * STEP_PULSE_PER_ROUND;  // 等价于pwm频率
@@ -58,10 +58,10 @@ void Step_Set_Speed(step_ctrl_t *step, double speed) {
     prescaler /= 2;
     period *= 2;
   }
-  // printf(
-  //     "[DEBUG] Step_Set_Speed: speed = %f, pulsePerSec = %f, prescaler = %d, "
-  //     "period = %d\n",
-  //     speed, pulsePerSec, prescaler, period);
+  printf(
+      "[DEBUG] Step_Set_Speed: speed = %f, pulsePerSec = %f, prescaler = %d, "
+      "period = %d\n",
+      speed, pulsePerSec, prescaler, period);
   __HAL_TIM_SET_PRESCALER(step->timMaster, prescaler - 1);
   __HAL_TIM_SET_AUTORELOAD(step->timMaster, period - 1);
   __HAL_TIM_SET_COMPARE(step->timMaster, step->timMasterCh, period / 2);
@@ -83,6 +83,7 @@ void Step_IT_Handler(step_ctrl_t *step, TIM_HandleTypeDef *htim) {
       __HAL_TIM_SET_COUNTER(step->timSlave, 0);
       step->rotating = 0;
       step->angle = step->angleTarget;
+      printf("[DEBUG] Step rotate done\n");
     }
   }
 }
@@ -98,7 +99,7 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
     return;
   }
   if (angle == 0) {
-    printf("[WARN] Step_Rotate: angle is 0\n");
+    printf("[ERROR] Step_Rotate: angle is 0\n");
     return;
   }
   step->angleTarget = step->angle + angle;
@@ -112,10 +113,14 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
 #endif
   angle = fabs(angle);
   uint16_t targetPulse = angle * STEP_PULSE_PER_ROUND / 360;
-  printf("[DEBUG] Step_Rotate: angle = %f, targetPulse = %d\n", angle,
-         targetPulse);
-  // __HAL_TIM_SET_COUNTER(step->timMaster, 0);
-  // __HAL_TIM_SET_COUNTER(step->timSlave, 0);
+  if (targetPulse < 2) {
+    printf("[ERROR] Step_Rotate: targetPulse is too small\n");
+    return;
+  }
+  printf("[DEBUG] Step_Rotate: angle = %f, targetPulse = %d, dir = %d\n", angle,
+         targetPulse, step->dir);
+  __HAL_TIM_SET_COUNTER(step->timMaster, 0);
+  __HAL_TIM_SET_COUNTER(step->timSlave, 0);
   __HAL_TIM_SET_AUTORELOAD(step->timSlave, targetPulse - 1);
   HAL_TIM_Base_Start_IT(step->timSlave);
   HAL_TIM_PWM_Start_IT(step->timMaster, step->timMasterCh);
