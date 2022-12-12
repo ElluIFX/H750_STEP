@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "candy.h"
 #include "scheduler.h"
+#include "step.h"
 #include "uartPack.h"
 /* USER CODE END Includes */
 
@@ -48,7 +49,7 @@
 
 /* USER CODE BEGIN PV */
 uart_o_ctrl_t uart_1;
-
+step_ctrl_t step_1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +96,9 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   Enable_Uart_O_Control(&huart1, &uart_1);
+  Step_Init(&step_1, &htim1, &htim2, TIM_CHANNEL_1, STEP_DIR_GPIO_Port,
+            STEP_DIR_Pin);
+  Step_Set_Speed(&step_1, 360);
   Scheduler_Init();  // initialize scheduler
   printf("\r\n--- System running ---\r\n");
   RGB(0, 1, 0);
@@ -180,11 +184,40 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 void Task_Uart_Overtime(void) { Uart_O_Timeout_Check(&uart_1); }
 void Task_Uart_Controller(void) {
   static uint8_t controlWord = 0;
+  static double temp = 0;
   if (__RX_DONE(uart_1)) {
     __RX_READOK(uart_1);
     controlWord = __RX_DATA(uart_1)[0];
-    printf("recive ok\n");
+    switch (controlWord) {
+      case '1':
+        Step_Rotate(&step_1, 90);
+        break;
+      case '2':
+        Step_Rotate(&step_1, -90);
+        break;
+      case '3':
+        Step_Rotate(&step_1, 180);
+        break;
+      case '4':
+        Step_Rotate(&step_1, -180);
+        break;
+      case '5':
+        Step_Rotate(&step_1, 360);
+        break;
+      case '6':
+        Step_Rotate(&step_1, -360);
+        break;
+      default:
+        printf("Unknown command\n");
+        break;
+    }
   }
+  // printf("tim2: %d\n", __HAL_TIM_GET_COUNTER(&htim2));
+}
+
+// TIM interrupt
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  Step_IT_Handler(&step_1, htim);
 }
 
 /* USER CODE END 4 */
