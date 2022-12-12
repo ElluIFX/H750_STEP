@@ -101,7 +101,7 @@ int main(void) {
             STEP_DIR_Pin);
   Step_Set_Speed(&step_1, 360);
   Scheduler_Init();  // initialize scheduler
-  printf("\r\n--- System running ---\r\n");
+  LOG_I("--- System running ---");
   RGB(0, 1, 0);
   /* USER CODE END 2 */
 
@@ -184,34 +184,35 @@ void Task_Uart_Overtime(void) { Uart_O_Timeout_Check(&uart_1); }
 void Task_Uart_Controller(void) {
   static uint8_t controlWord = 0;
   static double temp = 0;
-  if (__RX_DONE(uart_1)) {
-    __RX_READOK(uart_1);
-    controlWord = __RX_DATA(uart_1)[0];
+  if (RX_DONE(uart_1)) {
+    RX_CLEAR(uart_1);
+    controlWord = RX_DATA(uart_1)[0];
     switch (controlWord) {
       case 's':
-        if (sscanf(__RX_DATA(uart_1), "s:%lf", &temp) == 1) {
+        if (sscanf(RX_DATA(uart_1), "s:%lf", &temp) == 1) {
           Step_Set_Speed(&step_1, temp);
-          printf("Set speed: %lf\n", temp);
         }
         break;
       case 'r':
-        if (sscanf(__RX_DATA(uart_1), "r:%lf", &temp) == 1) {
+        if (sscanf(RX_DATA(uart_1), "r:%lf", &temp) == 1) {
           Step_Rotate(&step_1, temp);
-          printf("Rotate: %lf\n", temp);
         }
         break;
       case 'g':
-        if (sscanf(__RX_DATA(uart_1), "g:%lf", &temp) == 1) {
+        if (sscanf(RX_DATA(uart_1), "g:%lf", &temp) == 1) {
           Step_Rotate_Abs(&step_1, temp);
-          printf("Goto: %lf\n", temp);
         }
         break;
       default:
-        printf("Unknown command\n");
+        LOG_W("Unknown command");
         break;
     }
   }
   // printf("tim2: %d\n", __HAL_TIM_GET_COUNTER(&htim2));
+}
+
+void Task_Param_Report(void) {
+  printf("Step: %lf\r\n", Step_Get_Angle(&step_1));
 }
 
 // TIM interrupt

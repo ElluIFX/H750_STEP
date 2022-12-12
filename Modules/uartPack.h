@@ -14,43 +14,76 @@
 #include "stdio.h"
 #include "usart.h"
 // private define
-#define _REDIRECT_UART_PORT huart1  //重定向串口目标
-#define printf(...) printft(&_REDIRECT_UART_PORT, __VA_ARGS__)
-// typedef
-// typedef char* va_list;
+#define DEBUG_UART_PORT huart1  // 调试串口
+#define ENABLE_LOG 1            // 是否输出调试信息
+#define ENABLE_LOG_TIMESTAMP 1  // 调试信息是否添加时间戳
+#define ENABLE_LOG_COLOR 1      // 调试信息是否按等级添加颜色
 
+#define printf(...) printft(&DEBUG_UART_PORT, __VA_ARGS__)
 // constants
 #define RX_BUFFER_SIZE 256
 #define _RX_DEFAILT_TIMEOUT 10
 #define _RX_DEFAILT_ENDBIT '\n'
 
 // typedef
-typedef struct {                      //超时型UART控制结构体
-  uint8_t rxBuf[RX_BUFFER_SIZE];      //接收缓冲区
-  uint8_t rxSaveBuf[RX_BUFFER_SIZE];  //接收保存缓冲区
-  __IO uint8_t rxBufIndex;            //接收缓冲区索引
-  __IO uint8_t rxSaveFlag;            //接收完成标志位
-  __IO uint8_t rxSaveCounter;         //接收保存区计数器
-  __IO uint32_t rxTick;               //接收超时计时器
-  uint32_t rxTimeout;                 //接收超时时间
-  UART_HandleTypeDef *huart;          //串口句柄
+typedef struct {                      // 超时型UART控制结构体
+  uint8_t rxBuf[RX_BUFFER_SIZE];      // 接收缓冲区
+  uint8_t rxSaveBuf[RX_BUFFER_SIZE];  // 接收保存缓冲区
+  __IO uint8_t rxBufIndex;            // 接收缓冲区索引
+  __IO uint8_t rxSaveFlag;            // 接收完成标志位
+  __IO uint8_t rxSaveCounter;         // 接收保存区计数器
+  __IO uint32_t rxTick;               // 接收超时计时器
+  uint32_t rxTimeout;                 // 接收超时时间
+  UART_HandleTypeDef *huart;          // 串口句柄
 } uart_o_ctrl_t;
 
-typedef struct {                      //单结束位型UART控制结构体
-  uint8_t rxBuf[RX_BUFFER_SIZE];      //接收缓冲区
-  uint8_t rxSaveBuf[RX_BUFFER_SIZE];  //接收保存缓冲区
-  __IO uint8_t rxSaveFlag;            //接收完成标志位
-  __IO uint8_t rxBufIndex;            //接收缓冲区索引
-  __IO uint8_t rxSaveCounter;         //接收保存区计数器
-  uint8_t rxEndBit;                   //接收结束位
-  UART_HandleTypeDef *huart;          //串口句柄
+typedef struct {                      // 单结束位型UART控制结构体
+  uint8_t rxBuf[RX_BUFFER_SIZE];      // 接收缓冲区
+  uint8_t rxSaveBuf[RX_BUFFER_SIZE];  // 接收保存缓冲区
+  __IO uint8_t rxSaveFlag;            // 接收完成标志位
+  __IO uint8_t rxBufIndex;            // 接收缓冲区索引
+  __IO uint8_t rxSaveCounter;         // 接收保存区计数器
+  uint8_t rxEndBit;                   // 接收结束位
+  UART_HandleTypeDef *huart;          // 串口句柄
 } uart_e_ctrl_t;
 
 // defines
-#define __RX_DONE(uart_t) uart_t.rxSaveFlag
-#define __RX_DATA(uart_t) uart_t.rxSaveBuf
-#define __RX_COUNT(uart_t) uart_t.rxSaveCounter
-#define __RX_READOK(uart_t) (uart_t.rxSaveFlag = 0)
+#define RX_DONE(uart_t) uart_t.rxSaveFlag
+#define RX_DATA(uart_t) ((char *)uart_t.rxSaveBuf)
+#define RX_COUNT(uart_t) uart_t.rxSaveCounter
+#define RX_CLEAR(uart_t) (uart_t.rxSaveFlag = 0)
+
+// debug functions
+#define _GET_SYS_TICK HAL_GetTick
+#define _LOG_PRINTF printf
+
+#if ENABLE_LOG
+#if ENABLE_LOG_TIMESTAMP && ENABLE_LOG_COLOR
+#define _DBG_LOG(level, color, fmt, ...)                              \
+  _LOG_PRINTF("\033[" #color "m[" level "/%ldms] " fmt "\033[0m\r\n", \
+              _GET_SYS_TICK(), ##__VA_ARGS__)
+#elif !ENABLE_LOG_TIMESTAMP && ENABLE_LOG_COLOR
+#define _DBG_LOG(level, color, fmt, ...) \
+  _LOG_PRINTF("\033[" #color "m[" level "] " fmt "\033[0m\r\n", ##__VA_ARGS__)
+#elif ENABLE_LOG_TIMESTAMP && !ENABLE_LOG_COLOR
+#define _DBG_LOG(level, color, fmt, ...) \
+  _LOG_PRINTF("[" level "/%ldms] " fmt "\r\n", _GET_SYS_TICK(), ##__VA_ARGS__)
+#elif !ENABLE_LOG_TIMESTAMP && !ENABLE_LOG_COLOR
+#define _DBG_LOG(level, color, fmt, ...) \
+  _LOG_PRINTF("[" level "] " fmt "\r\n", ##__VA_ARGS__)
+#endif
+#define LOG_D(fmt, ...) _DBG_LOG("D", 36, fmt, __VA_ARGS__)
+#define LOG_I(fmt, ...) _DBG_LOG("I", 32, fmt, __VA_ARGS__)
+#define LOG_W(fmt, ...) _DBG_LOG("W", 33, fmt, __VA_ARGS__)
+#define LOG_E(fmt, ...) _DBG_LOG("E", 31, fmt, __VA_ARGS__)
+#define LOG_RAW(fmt, ...) _LOG_PRINTF(fmt, __VA_ARGS__)
+#else
+#define LOG_D(...) ((void)0)
+#define LOG_I(...) ((void)0)
+#define LOG_W(...) ((void)0)
+#define LOG_E(...) ((void)0)
+#define LOG_RAW(...) ((void)0)
+#endif
 
 // public functions
 

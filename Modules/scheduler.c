@@ -12,6 +12,7 @@
 
 #include <key.h>
 #include <scheduler.h>
+#include <uartPack.h>
 #include <stdio.h>
 /************************ scheduler tasks ************************/
 
@@ -21,6 +22,7 @@ static scheduler_task_t schTaskList[] = {
     {Task_Uart_Overtime, 100, 0, 0, 1},
     {Task_Key_Func, 50, 0, 0, 1},
     {key_check_all_loop_1ms, 1000, 0, 0, 1},
+    {Task_Param_Report, 20, 0, 0, 0},
 #if _ENABLE_SCH_DEBUG
     {Show_Sch_Debug_info, 0.2, 0, 0, 1},
 #endif
@@ -29,6 +31,7 @@ static scheduler_task_t schTaskList[] = {
 __weak void Task_Uart_Controller(void) { return; }
 __weak void Task_Uart_Overtime(void) { return; }
 __weak void Task_Key_Func(void) { return; }
+__weak void Task_Param_Report(void) { return; }
 // @note !redefined in main.c
 
 /************************ scheduler tasks end ************************/
@@ -118,16 +121,16 @@ void Set_SchTask_Freq(uint8_t taskId, float freq) {
 #if _ENABLE_SCH_DEBUG
 
 void Show_Sch_Debug_info(void) {
-  static uint8_t str_buf[100];
+  static char str_buf[100];
   for (uint8_t i = 0; i < SCH_TASK_COUNT - 1; i++) {
     if (i == 0) {
-      sprintf(str_buf, "\r\n>>DEBUG INFO:\r\n");
+      sprintf(str_buf, "SCHEDULER INFO:\r\n");
     }
     sprintf(str_buf, "%sTask %d: %ldms\r\n", str_buf, i,
             _sch_debug_task_consuming[i]);
     _sch_debug_task_consuming[i] = 0;
   }
-  printf("%s<<\r\n", str_buf);
+  LOG_D("%s------ INFO END ------", str_buf);
 }
 
 #endif  // _ENABLE_SCH_DEBUG

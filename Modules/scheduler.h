@@ -18,6 +18,7 @@
 #define UART_OVERTIME_TASK_ID 1
 #define KEY_FUNC_TASK_ID 2
 #define KEY_CHECK_ALL_LOOP_1MS_TASK_ID 3
+#define PARAM_REPORT_TASK_ID 4
 
 #define SCH_TASK_COUNT sizeof(schTaskList) / sizeof(scheduler_task_t)
 // typedef
@@ -30,9 +31,10 @@ typedef struct {       //用户任务结构
 } scheduler_task_t;
 // private variables
 // private functions
-__weak void Task_Uart_Controller(void);
-__weak void Task_Uart_Overtime(void);
-__weak void Task_Key_Func(void);
+void Task_Uart_Controller(void);
+void Task_Uart_Overtime(void);
+void Task_Key_Func(void);
+void Task_Param_Report(void);
 
 void Scheduler_Init(void);
 void Scheduler_Run(void);
@@ -41,6 +43,6 @@ void Disable_SchTask(uint8_t taskId);
 void Set_SchTask_Freq(uint8_t taskId, float freq);
 #if _ENABLE_SCH_DEBUG
 void Show_Sch_Debug_info(void);
-#warning You Enabled a Schduler Debugging Feature, which will cause lower performance.
+#warning You Enabled a Scheduler Debugging Feature, which will cause lower performance.
 #endif  // _ENABLE_SCH_DEBUG
 #endif  // _SCHEDULER_H_
