@@ -15,9 +15,6 @@
 #include "stdarg.h"
 #include "string.h"
 
-static char sendBuff[256];  //缓冲区
-static int sendLen = 0;     //发送计数
-
 /**
  * @brief Send a format string to target UART port
  * @param  huart            UART handle
@@ -25,8 +22,14 @@ static int sendLen = 0;     //发送计数
  * @retval number of bytes sent, -1 if error
  */
 int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
+  static char sendBuff[_UART_BUFFER_SIZE];  // 发送缓冲区
+  static int sendLen = 0;                   // 发送计数
+  // 检查串口是否打开
+  if (huart->gState != HAL_UART_STATE_READY) {
+    return -1;
+  }
   va_list ap;         // typedef char *va_list
-  va_start(ap, fmt);  //找到第一个可变形参的地址赋给ap
+  va_start(ap, fmt);  // 找到第一个可变形参的地址赋给ap
   sendLen = vsprintf(sendBuff, fmt, ap);
   va_end(ap);
   if (sendLen > 0) {
@@ -43,7 +46,7 @@ int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
  * @param  ctrl             target UART controller
  */
 void Enable_Uart_O_Control(UART_HandleTypeDef *huart, uart_o_ctrl_t *ctrl) {
-  //设置串口接收中断
+  // 设置串口接收中断
   HAL_UART_Receive_IT(huart, ctrl->rxBuf, 1);
   if (ctrl->rxTimeout == 0) {
     ctrl->rxTimeout = _RX_DEFAILT_TIMEOUT;
@@ -61,7 +64,7 @@ void Enable_Uart_O_Control(UART_HandleTypeDef *huart, uart_o_ctrl_t *ctrl) {
  * @param  ctrl             target UART controller
  */
 void Enable_Uart_E_Control(UART_HandleTypeDef *huart, uart_e_ctrl_t *ctrl) {
-  //设置串口接收中断
+  // 设置串口接收中断
   HAL_UART_Receive_IT(huart, ctrl->rxBuf, 1);
   if (ctrl->rxEndBit == 0) {
     ctrl->rxEndBit = _RX_DEFAILT_ENDBIT;
@@ -80,7 +83,7 @@ void Enable_Uart_E_Control(UART_HandleTypeDef *huart, uart_e_ctrl_t *ctrl) {
  */
 uint8_t Uart_O_Data_Process(uart_o_ctrl_t *ctrl) {
   ctrl->rxTick = HAL_GetTick();
-  if (++ctrl->rxBufIndex >= RX_BUFFER_SIZE - 1) {
+  if (++ctrl->rxBufIndex >= _UART_BUFFER_SIZE - 1) {
     memcpy(ctrl->rxSaveBuf, ctrl->rxBuf, ctrl->rxBufIndex);
     ctrl->rxSaveCounter = ctrl->rxBufIndex;
     ctrl->rxSaveBuf[ctrl->rxBufIndex] = 0;
@@ -120,7 +123,7 @@ uint8_t Uart_O_Timeout_Check(uart_o_ctrl_t *ctrl) {
  */
 uint8_t Uart_E_Data_Process(uart_e_ctrl_t *ctrl) {
   ctrl->rxBufIndex++;
-  if (ctrl->rxBufIndex >= RX_BUFFER_SIZE - 1 ||
+  if (ctrl->rxBufIndex >= _UART_BUFFER_SIZE - 1 ||
       ctrl->rxBuf[ctrl->rxBufIndex - 1] == ctrl->rxEndBit) {
     ctrl->rxBufIndex--;
     memcpy(ctrl->rxSaveBuf, ctrl->rxBuf, ctrl->rxBufIndex);
