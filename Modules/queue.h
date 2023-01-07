@@ -15,10 +15,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-
-#ifndef queue_protect
-#define queue_protect()
-#endif
+#define QUEUE_THREAD_SAFE 1 // Disable interrupt during variable access.
 
 #define __DEQUEUE_0(__QUEUE)                       \
   ({                                               \
@@ -119,6 +116,12 @@ typedef struct byte_queue_t {
   uint16_t hwPeek;
   uint16_t hwPeekLength;
 } byte_queue_t;
+
+#if QUEUE_THREAD_SAFE
+#define __queue_protect() SAFE_ATOM_CODE
+#else
+#define __queue_protect()
+#endif
 
 extern byte_queue_t *queue_init(byte_queue_t *ptObj, void *pBuffer,
                                 uint16_t hwItemSize);
