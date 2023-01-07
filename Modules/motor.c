@@ -1,9 +1,8 @@
 /**
- * @file pid.c
- * @brief PID控制器，目前整合了位置PID和速度PID，以及一个没啥用的增量式PID，
+ * @file motor.c
+ * @brief 直流电机PID控制器，目前整合了位置PID和速度PID，以及一个没啥用的增量式PID，
  * 封装了电机控制函数，包括编码器读速度和读角度，需要根据实际情况修改的参量都在pid.h里面
  * 位置环可以不使能，只运行速度环的RUN函数就是单速度环。
- * 我也不知道为什么我写注释一下英文一下中文，麻了
  * @author Ellu (lutaoyu@163.com)
  * @version 2.0
  * @date 2021-12-18
@@ -11,7 +10,7 @@
  * THINK DIFFERENTLY
  */
 
-#include "pid.h"
+#include "motor.h"
 
 #include "candy.h"
 /****************** Position PID Functions ******************/

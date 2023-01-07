@@ -1,6 +1,6 @@
 /**
- * @file pid.h
- * @brief See pid.c for details.
+ * @file motor.h
+ * @brief See motor.c for details.
  * @author Ellu (lutaoyu@163.com)
  * @version 2.0
  * @date 2021-12-18
@@ -8,8 +8,8 @@
  * THINK DIFFERENTLY
  */
 
-#ifndef PID_H
-#define PID_H
+#ifndef MOTOR_H
+#define MOTOR_H
 #include <main.h>
 #include <tim.h>
 
