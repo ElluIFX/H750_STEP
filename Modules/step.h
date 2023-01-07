@@ -18,13 +18,13 @@
 #define STEP_BASE_PULSE 200  // 零细分脉冲数
 #define STEP_SUBDIVISION 32  // 细分倍数
 #define STEP_PULSE_PER_ROUND (STEP_BASE_PULSE * STEP_SUBDIVISION)  // 一圈脉冲数
-#define STEP_DIR_LOGIC_REVERSE \
-  0  // 默认逻辑下, 顺时针转动时DIR为高电平, 置1可反转
+#define STEP_DIR_LOGIC_REVERSE 0  // 反转方向控制逻辑(顺时针时DIR默认为高电平)
 
 // 功能相关
 #define STEP_TIM_BASE_CLK 240000000  // 定时器时钟频率
 #define STEP_PWM_MAX_FREQ 20000      // PWM最大频率(防止丢步)
-#define STEP_SLAVE_TIM_MAX_CNT 4294967295  // 从定时器最大计数值 (16bit=65535 32bit=4294967295)
+// 从定时器 16bit=65535 32bit=4294967295
+#define STEP_SLAVE_TIM_MAX_CNT 4294967295
 
 /****************** 数据类型定义 ******************/
 
@@ -41,13 +41,21 @@ typedef struct {                 // 步进电机控制结构体
   uint32_t timMasterCh;          // 主定时器通道
   GPIO_TypeDef *dirPort;         // 方向控制端口
   uint16_t dirPin;               // 方向控制引脚
+  uint8_t dirLogic;              // 方向控制逻辑
 } step_ctrl_t;
+
+/****************** 宏函数声明 ******************/
+
+#define __STEP_START_PWM(step) \
+  HAL_TIM_PWM_Start_IT(step->timMaster, step->timMasterCh)
+#define __STEP_STOP_PWM(step) \
+  HAL_TIM_PWM_Stop_IT(step->timMaster, step->timMasterCh)
 
 /****************** 函数声明 ******************/
 
 void Step_Init(step_ctrl_t *step, TIM_HandleTypeDef *timMaster,
                TIM_HandleTypeDef *timSlave, uint32_t timMasterCh,
-               GPIO_TypeDef *dirPort, uint16_t dirPin);
+               GPIO_TypeDef *dirPort, uint16_t dirPin, uint8_t dirLogic);
 void Step_IT_Handler(step_ctrl_t *step, TIM_HandleTypeDef *htim);
 void Step_Set_Speed(step_ctrl_t *step, double speed);
 void Step_Rotate(step_ctrl_t *step, double angle);

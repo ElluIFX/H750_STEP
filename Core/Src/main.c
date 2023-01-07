@@ -98,11 +98,11 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   Enable_Uart_O_Control(&huart1, &uart_1);
   Step_Init(&step_1, &htim1, &htim2, TIM_CHANNEL_1, STEP_DIR_GPIO_Port,
-            STEP_DIR_Pin);
-  Step_Set_Speed(&step_1, 1200);
+            STEP_DIR_Pin, 0);
   Scheduler_Init();  // initialize scheduler
   LOG_I("--- System running ---");
-  RGB(0, 1, 0);
+  Step_Set_Speed(&step_1, 1200);
+  RGB(0, 0, 0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -236,6 +236,7 @@ void Error_Handler(void) {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  LOG_E("HardFault Occurred");
   while (1) {
   }
   /* USER CODE END Error_Handler_Debug */
@@ -254,6 +255,7 @@ void assert_failed(uint8_t *file, uint32_t line) {
   /* User can add his own implementation to report the file name and line
      number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
      line) */
+  LOG_E("Assert Failed: %s:%d", file, line);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
