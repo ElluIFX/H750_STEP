@@ -108,23 +108,6 @@ int main(void) {
   Step_Set_Speed(&step_1, 1200);
   RGB(0, 0, 0);
   QUEUE_INIT(&queue_1, queueBuffer);
-  LOG_I("inqueue: %d", GET_QUEUE_COUNT(&queue_1));
-
-  ENQUEUE(&queue_1, (char)'1');
-  ENQUEUE(&queue_1, "23", 2);
-  ENQUEUE(&queue_1, "4", 1);
-  int cnt = GET_QUEUE_COUNT(&queue_1);
-  LOG_I("inqueue: %d", cnt);
-  for (uint16_t i = 0; i < cnt; i++) {
-    LOG_I("peek: %c", PEEK_QUEUE(&queue_1));
-    LOG_I("peek pos: %d", GET_PEEK_STATUS(&queue_1));
-    GET_ALL_PEEKED(&queue_1);
-  }
-  char temp[12];
-  DEQUEUE(&queue_1, temp, cnt);
-  temp[cnt] = '\0';
-  LOG_I("dequeue result: %s", temp);
-  LOG_I("inqueue: %d", GET_QUEUE_COUNT(&queue_1));
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -57,33 +57,37 @@ void RGB(uint8_t r, uint8_t g, uint8_t b);
   __CONNECT8(__A, __B, __C, __D, __E, __F, __G, __H)
 #define CONNECT9(__A, __B, __C, __D, __E, __F, __G, __H, __I)
 
-#define VA_NUM_ARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, __N, ...) __N
+#define VA_NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, __N, ...) __N
 // 获取参数个数
 #define VA_NUM_ARGS(...) \
-  VA_NUM_ARGS_IMPL(__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+  VA_NUM_ARGS_IMPL(0, ##__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
 // 连接宏
 #define CONNECT(...) CONNECT2(CONNECT, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
+// 函数选择宏
+#define EVAL(__FUNC, ...) CONNECT2(__FUNC, VA_NUM_ARGS(__VA_ARGS__))
+
 // using
-#define __using1(__declare)                                   \
+#define __using_1(__declare)                                  \
   for (__declare, *CONNECT3(__using_, __LINE__, _ptr) = NULL; \
        CONNECT3(__using_, __LINE__, _ptr)++ == NULL;)
 
-#define __using2(__declare, __on_leave_expr)                  \
+#define __using_2(__declare, __on_leave_expr)                 \
   for (__declare, *CONNECT3(__using_, __LINE__, _ptr) = NULL; \
        CONNECT3(__using_, __LINE__, _ptr)++ == NULL; __on_leave_expr)
 
-#define __using3(__declare, __on_enter_expr, __on_leave_expr)                \
+#define __using_3(__declare, __on_enter_expr, __on_leave_expr)               \
   for (__declare, *CONNECT3(__using_, __LINE__, _ptr) = NULL;                \
        CONNECT3(__using_, __LINE__, _ptr)++ == NULL ? ((__on_enter_expr), 1) \
                                                     : 0;                     \
        __on_leave_expr)
 
 // 局部变量 args: 局部变量 [进入代码] [离开代码]
-#define using(...) CONNECT2(__using, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
+#define using(...) EVAL(__using_, __VA_ARGS__)(__VA_ARGS__)
 
 #define __LINE_NAME(__NAME) CONNECT3(__, __NAME, __LINE__)
+
 // 保证原子性的代码块，不会被中断打断
 #define SAFE_ATOM_CODE                                   \
   using(uint32_t __LINE_NAME(temp) = ({                  \
@@ -93,43 +97,40 @@ void RGB(uint8_t r, uint8_t g, uint8_t b);
         }),                                              \
         __set_PRIMASK(__LINE_NAME(temp)))
 
-#define __foreach2(__array, __type)                                          \
+// 数组长度
+#define dimof(__array) (sizeof(__array) / sizeof(__array[0]))
+
+#define __foreach_2(__array, __type)                                         \
   using(__type * _ = __array) for (uint_fast32_t CONNECT2(count, __LINE__) = \
                                        dimof(__array);                       \
                                    CONNECT2(count, __LINE__) > 0;            \
                                    _++, CONNECT2(count, __LINE__)--)
 
-#define __foreach3(__array, __type, __pt)                                    \
+#define __foreach_1(__array) __foreach_2(__array, typeof(*(__array)))
+#define __foreach_3(__array, __type, __pt)                                   \
   using(__type * __pt = __array) for (uint_fast32_t CONNECT2(                \
                                           count, __LINE__) = dimof(__array); \
                                       CONNECT2(count, __LINE__) > 0;         \
                                       __pt++, CONNECT2(count, __LINE__)--)
-#define __foreach1(__array) __foreach2(__array, typeof(*(__array)))
-
-#define __foreach_reverse2(__array, __type)                            \
+#define __foreach_reverse_2(__array, __type)                           \
   using(__type * _ = __array + dimof(__array) -                        \
                      1) for (uint_fast32_t CONNECT2(count, __LINE__) = \
                                  dimof(__array);                       \
                              CONNECT2(count, __LINE__) > 0;            \
                              _--, CONNECT2(count, __LINE__)--)
-#define __foreach_reverse3(__array, __type, __pt)                         \
+#define __foreach_reverse_1(__array) \
+  __foreach_reverse_2(__array, typeof(*(__array)))
+#define __foreach_reverse_3(__array, __type, __pt)                        \
   using(__type * __pt = __array + dimof(__array) -                        \
                         1) for (uint_fast32_t CONNECT2(count, __LINE__) = \
                                     dimof(__array);                       \
                                 CONNECT2(count, __LINE__) > 0;            \
                                 __pt--, CONNECT2(count, __LINE__)--)
-#define __foreach_reverse1(__array) \
-  __foreach_reverse2(__array, typeof(*(__array)))
 
-// 用于函数返回值检查
-#define CHECK_RET(__ret)  // 数组长度
-#define dimof(__array) (sizeof(__array) / sizeof(__array[0]))
-
-// 遍历数组 args: 数组 [元素类型] [元素指针名(默认为_)]
-#define foreach(...) CONNECT2(__foreach, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
-// 反向遍历数组 args: 数组 [元素类型] [元素指针名(默认为_)]
-#define foreach_reverse(...) \
-  CONNECT2(__foreach_reverse, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
+// 遍历数组 args: 数组 [元素类型] [元素指针名(默认为'_')]
+#define foreach(...) EVAL(__foreach_, __VA_ARGS__)(__VA_ARGS__)
+// 反向遍历数组 args: 数组 [元素类型] [元素指针名(默认为'_')]
+#define foreach_reverse(...) EVAL(__foreach_reverse_, __VA_ARGS__)(__VA_ARGS__)
 
 /************** 语法糖 END *********************/
 #endif  // CANDY_H

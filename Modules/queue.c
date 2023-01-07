@@ -8,15 +8,13 @@
  * THINK DIFFERENTLY
  */
 
-#define __BYTE_QUEUE_CLASS_IMPLEMENT__
 #include "queue.h"
 
 #undef this
-#define this        (*ptThis)
+#define this        (*ptObj)
 
-byte_queue_t * queue_init_byte(byte_queue_t *ptObj, void *pBuffer, uint16_t hwItemSize)
+byte_queue_t * queue_init(byte_queue_t *ptObj, void *pBuffer, uint16_t hwItemSize)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(pBuffer == NULL || hwItemSize == 0 || ptObj == NULL) {
         return NULL;
@@ -34,9 +32,8 @@ byte_queue_t * queue_init_byte(byte_queue_t *ptObj, void *pBuffer, uint16_t hwIt
     return ptObj;
 }
 
-bool enqueue_byte(byte_queue_t *ptObj, uint8_t chByte)
+bool queue_in_byte(byte_queue_t *ptObj, uint8_t chByte)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if( ptObj == NULL) {
         return false;
@@ -60,9 +57,8 @@ bool enqueue_byte(byte_queue_t *ptObj, uint8_t chByte)
     return true;
 }
 
-int16_t enqueue_bytes(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
+int16_t queue_in(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if( ptObj == NULL) {
         return -1;
@@ -96,9 +92,8 @@ int16_t enqueue_bytes(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
     return hwLength;
 }
 
-bool dequeue_byte(byte_queue_t *ptObj, uint8_t *pchByte)
+bool queue_out_byte(byte_queue_t *ptObj, uint8_t *pchByte)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(pchByte == NULL || ptObj == NULL) {
         return false;
@@ -123,9 +118,8 @@ bool dequeue_byte(byte_queue_t *ptObj, uint8_t *pchByte)
     return true;
 }
 
-int16_t dequeue_bytes(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
+int16_t queue_out(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(pchByte == NULL || ptObj == NULL) {
         return -1;
@@ -160,9 +154,8 @@ int16_t dequeue_bytes(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
     return hwLength;
 }
 
-bool is_byte_queue_empty(byte_queue_t *ptObj)
+bool queue_check_empty(byte_queue_t *ptObj)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return false;
@@ -176,9 +169,8 @@ bool is_byte_queue_empty(byte_queue_t *ptObj)
     return false;
 }
 
-int16_t get_queue_count(byte_queue_t *ptObj)
+int16_t queue_get_count(byte_queue_t *ptObj)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return -1;
@@ -187,9 +179,8 @@ int16_t get_queue_count(byte_queue_t *ptObj)
     return (this.hwLength);
 }
 
-int16_t get_queue_available_count(byte_queue_t *ptObj)
+int16_t queue_get_available(byte_queue_t *ptObj)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return -1;
@@ -200,7 +191,6 @@ int16_t get_queue_available_count(byte_queue_t *ptObj)
 
 bool is_peek_empty(byte_queue_t *ptObj)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return false;
@@ -214,9 +204,8 @@ bool is_peek_empty(byte_queue_t *ptObj)
     return false;
 }
 
-bool peek_byte_queue(byte_queue_t *ptObj, uint8_t *pchByte)
+bool queue_peek_byte(byte_queue_t *ptObj, uint8_t *pchByte)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL || pchByte == NULL) {
         return false;
@@ -239,9 +228,8 @@ bool peek_byte_queue(byte_queue_t *ptObj, uint8_t *pchByte)
     return true;
 }
 
-int16_t peek_bytes_queue(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
+int16_t queue_peek(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL || pchByte == NULL) {
         return -1;
@@ -274,9 +262,8 @@ int16_t peek_bytes_queue(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength)
     return hwLength;
 }
 
-bool reset_peek_byte(byte_queue_t *ptObj)
+bool queue_reset_peek_pos(byte_queue_t *ptObj)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return false;
@@ -289,9 +276,8 @@ bool reset_peek_byte(byte_queue_t *ptObj)
     return true;
 }
 
-bool get_all_peeked_byte(byte_queue_t *ptObj)
+bool queue_pop_peeked(byte_queue_t *ptObj)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return false;
@@ -304,10 +290,9 @@ bool get_all_peeked_byte(byte_queue_t *ptObj)
     return true;
 }
 
-uint16_t get_peek_status(byte_queue_t *ptObj)
+uint16_t queue_get_peek_pos(byte_queue_t *ptObj)
 {
     uint16_t hwCount;
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return false;
@@ -323,9 +308,8 @@ uint16_t get_peek_status(byte_queue_t *ptObj)
     return hwCount;
 }
 
-bool restore_peek_status(byte_queue_t *ptObj, uint16_t hwCount)
+bool queue_set_peek_pos(byte_queue_t *ptObj, uint16_t hwCount)
 {
-    class_internal(ptObj, ptThis, byte_queue_t);
 
     if(ptObj == NULL) {
         return false;
