@@ -93,22 +93,43 @@ void RGB(uint8_t r, uint8_t g, uint8_t b);
         }),                                              \
         __set_PRIMASK(__LINE_NAME(temp)))
 
-#define foreach2(__array, __type)                                            \
+#define __foreach2(__array, __type)                                          \
   using(__type * _ = __array) for (uint_fast32_t CONNECT2(count, __LINE__) = \
                                        dimof(__array);                       \
                                    CONNECT2(count, __LINE__) > 0;            \
                                    _++, CONNECT2(count, __LINE__)--)
 
-#define foreach3(__array, __type, __pt)                                      \
+#define __foreach3(__array, __type, __pt)                                    \
   using(__type * __pt = __array) for (uint_fast32_t CONNECT2(                \
                                           count, __LINE__) = dimof(__array); \
                                       CONNECT2(count, __LINE__) > 0;         \
                                       __pt++, CONNECT2(count, __LINE__)--)
-// 数组长度
+#define __foreach1(__array) __foreach2(__array, typeof(*(__array)))
+
+#define __foreach_reverse2(__array, __type)                            \
+  using(__type * _ = __array + dimof(__array) -                        \
+                     1) for (uint_fast32_t CONNECT2(count, __LINE__) = \
+                                 dimof(__array);                       \
+                             CONNECT2(count, __LINE__) > 0;            \
+                             _--, CONNECT2(count, __LINE__)--)
+#define __foreach_reverse3(__array, __type, __pt)                         \
+  using(__type * __pt = __array + dimof(__array) -                        \
+                        1) for (uint_fast32_t CONNECT2(count, __LINE__) = \
+                                    dimof(__array);                       \
+                                CONNECT2(count, __LINE__) > 0;            \
+                                __pt--, CONNECT2(count, __LINE__)--)
+#define __foreach_reverse1(__array) \
+  __foreach_reverse2(__array, typeof(*(__array)))
+
+// 用于函数返回值检查
+#define CHECK_RET(__ret)  // 数组长度
 #define dimof(__array) (sizeof(__array) / sizeof(__array[0]))
 
-// 遍历数组 args: 数组 元素类型 [元素指针名(默认为_)]
-#define foreach(...) CONNECT2(foreach, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
+// 遍历数组 args: 数组 [元素类型] [元素指针名(默认为_)]
+#define foreach(...) CONNECT2(__foreach, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
+// 反向遍历数组 args: 数组 [元素类型] [元素指针名(默认为_)]
+#define foreach_reverse(...) \
+  CONNECT2(__foreach_reverse, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
 /************** 语法糖 END *********************/
 #endif  // CANDY_H

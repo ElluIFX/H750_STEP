@@ -69,7 +69,7 @@ void Error_Handler(void);
 #define STEP_DIR_Pin GPIO_PIN_8
 #define STEP_DIR_GPIO_Port GPIOE
 /* USER CODE BEGIN Private defines */
-
+#define _MSC_VER
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
