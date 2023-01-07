@@ -23,7 +23,22 @@ float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+/**
+ * @brief Linear mapping input to the specified range
+ * @param  x                input value
+ * @param  in_min           input range min
+ * @param  in_max           input range max
+ * @param  out_min          output range min
+ * @param  out_max          output range max
+ * @retval Mapping result
+ */
+double dmap(double x, double in_min, double in_max, double out_min,
+            double out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 #if _DELAYUS_USED_
+#include "tim.h"
 /**
  * @brief Delay_us, usint a timer prescale to 1Mhz, reloadRegister = 1
  * @param  us               delay time in us
@@ -38,37 +53,6 @@ void delay_us(uint16_t us) {
   HAL_TIM_Base_Stop(&_DELAY_TIM);
 }
 #endif
-
-#if _WS2812_USED_
-/**
- * @brief Send data bits to WS2812, can be used only when MCU's SYSCLK is
- * 168MHz.
- * @param  data             uint32_t LED array, each in Br G R B
- * order(eg.0xffffffff as White), Br is brightness, using OR to combine
- * Total length equals number of LEDs, the first LED in left.
- * @param  len              the number of LEDs
- * @param  br              brightness, 0-1
- */
-void WS2812_SendBit(uint8_t* data, uint8_t len, float br) {
-  static uint8_t _i = 0;
-  static uint8_t _j = 0;
-  __IO float div = br;
-  static uint8_t temp = 0;
-  __disable_irq();  // disable all interrupts
-  for (_i = 0; _i < len * 3; _i++) {
-    temp = *data++;
-    temp *= div;
-    for (_j = 0; _j < 8; _j++) {
-      if (temp & (128 >> _j)) {
-        __2812_HIGH_BIT;
-      } else {
-        __2812_LOW_BIT;
-      }
-    }
-  }
-  __enable_irq();  // enable all interrupts
-}
-#endif  // _WS2812_USED_
 
 #if _RGB_LED_USED_
 /**
