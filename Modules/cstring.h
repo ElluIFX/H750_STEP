@@ -1,67 +1,145 @@
-#ifndef cstring_h
-#define cstring_h
+#pragma once
 
-#include <main.h>
+#include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
-#define CSTRING_PERMANENT 1
-#define CSTRING_INTERNING 2
-#define CSTRING_ONSTACK 4
 
-#define CSTRING_INTERNING_SIZE 32
-#define CSTRING_STACK_SIZE 128
+#define CSTRING_DEBUG 0
 
-struct cstring_data {
-  char* cstr;
-  uint32_t hash_size;
-  uint16_t type;
-  uint16_t ref;
-};
+static const size_t npos = -1;
 
-typedef struct _cstring_buffer {
-  struct cstring_data* str;
-} cstring_buffer[1];
+typedef struct string_t *string;
 
-typedef struct cstring_data* cstring;
-
-#define CSTRING_BUFFER(var)                                                    \
-  char var##_cstring[CSTRING_STACK_SIZE] = {'\0'};                             \
-  struct cstring_data var##_cstring_data = {var##_cstring, 0, CSTRING_ONSTACK, \
-                                            0};                                \
-  cstring_buffer var;                                                          \
-  var->str = &var##_cstring_data;
-
-#define CSTRING_LITERAL(var, cstr)                                             \
-  static cstring var = NULL;                                                   \
-  if (var) {                                                                   \
-  } else {                                                                     \
-    cstring tmp = cstring_persist("" cstr, (sizeof(cstr) / sizeof(char)) - 1); \
-    if (!__sync_bool_compare_and_swap(&var, NULL, tmp)) {                      \
-      cstring_free_persist(tmp);                                               \
-    }                                                                          \
-  }
-
-#define CSTRING(s) ((s)->str)
-
-#define CSTRING_CLOSE(var)     \
-  if ((var)->str->type != 0) { \
-  } else                       \
-    cstring_release((var)->str);
-
-/* low level api, don't use directly */
-cstring cstring_persist(const char* cstr, size_t sz);
-void cstring_free_persist(cstring s);
-
-/* public api */
-cstring cstring_grab(cstring s);
-void cstring_release(cstring s);
-cstring cstring_cat(cstring_buffer sb, const char* str);
-cstring cstring_printf(cstring_buffer sb, const char* format, ...)
-#ifdef __GNUC__
-    __attribute__((format(printf, 2, 3)))
-#endif
-    ;
-int cstring_equal(cstring a, cstring b);
-uint32_t cstring_hash(cstring s);
-
-#endif
+/**
+ *  Change the value of a [string] object from a [char *]
+ */
+void string_assign(string dest, const char *src);
+/**
+ *  Change the value of a [string] object from another [string] object
+ */
+void string_copy(string dest, const string src);
+/**
+ *  Duplicate a string into a new alloced one
+ *  @param this string to be duplicate.
+ *  @returns string with a new adress with the same content as the string in parameter
+ */
+string string_duplicate(const string this);
+/**
+ *  Print the current value of a [string] object
+ */
+void string_print(const string this);
+/**
+ *  Print the current value of a [string] object followed by an endline
+ */
+void string_println(const string this);
+/**
+ *  Clear a [string] object
+ */
+void string_clear(string this);
+/**
+ *  Return the current value of a [string] object as a [const char *]
+ */
+const char *string_data(const string this);
+/**
+ *  Return the current value of a [string] object as a [const char *]
+ */
+const char *string_c_str(const string this);
+/**
+ *  Return the size of the current value of a [string] object
+ */
+size_t string_size(const string this);
+/**
+ *  Return the lenght of the current value of a [string] object
+ */
+size_t string_length(const string this);
+/**
+ *  Compare a [string] and a [char *]. the result is the same as strcmp()
+ */
+int string_compare_c_str(const string this, const char *other);
+/**
+ *  Compare two [string] objects. the result is the same as strcmp()
+ */
+int string_compare(const string this, const string other);
+/**
+ *  Return the [char] located at this[pos]
+ */
+char string_at(const string this, size_t pos);
+/**
+ *  Add a [char] at the end of a [string] object
+ */
+void string_push_back(string this, char insertion);
+/**
+ *  Remove the last [char] of a [string] object
+ */
+void string_pop_back(string this);
+/**
+ *  Reverse the entire [string]
+ */
+void string_reverse(string this);
+/**
+ *  Swap the content of two [string] objects
+ */
+void string_swap(string this, string other);
+/**
+ *  Concatenate the value of a [string] object and a [char *]
+ */
+void string_cat(string this, const char *other);
+/**
+ *  Add the value of "new_string" at the end of "this"
+ *  (Use string_cat to concatenate a [string] with a [char *])
+ */
+void string_append(string this, const string other);
+/**
+ *  Insert a [char *] at the position "pos" into a [string] object
+ */
+void string_insert_c_str(string this, const char *insertion, size_t pos);
+/**
+ *  Insert a [string] at the position "pos" into a [string] object
+ */
+void string_insert(string this, const string insertion, size_t pos);
+/**
+ *  Creates a [string] object with the content of [str]
+ *  @param str content that will be stored by the [string]
+ *  @returns a new string
+ */
+string string_create(const char *str);
+/**
+ *  Destroy a [string] object
+ *  @param this string to be destroyed
+ */
+void string_destroy(string this);
+/**
+ *  @param this string struct
+ *  @returns true if the string is empty / false otherwise.
+ */
+bool string_empty(const string this);
+/**
+ *  Searches the string for the first occurrence of the sequence specified by its arguments.
+ *  @param to_find A c_string with the subject to search for.
+ *  @returns The position of the first character of the first match.
+ */
+size_t string_find_c_str(const string this, const char *to_find);
+/**
+ *  Searches the string for the first occurrence of the sequence specified by its arguments.
+ *  @param to_find Another string with the subject to search for.
+ *  @returns The position of the first character of the first match.
+ */
+size_t string_find(const string this, const string to_find);
+/**
+ *  Searches the string for the last occurrence of the sequence specified by its arguments.
+ *  @param to_find A c_string with the subject to search for.
+ *  @returns The position of the first character of the last match.
+ */
+size_t string_rfind_c_str(const string this, const char *to_find);
+/**
+ *  Searches the string for the last occurrence of the sequence specified by its arguments.
+ *  @param to_find Another string with the subject to search for.
+ *  @returns The position of the first character of the last match.
+ */
+size_t string_rfind(const string this, const string to_find);
+/**
+ *  Returns a newly constructed string object with its value initialized to a copy of a substring of this object
+ *  @param pos Position of the first character to be copied as a substring
+ *  @param len Number of characters to include in the substring (npos indicates all characters until the end of the string)
+ *  @returns A string object with a substring of this object
+ */
+string string_substr(const string this, size_t pos, size_t len);

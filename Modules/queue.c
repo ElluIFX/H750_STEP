@@ -13,6 +13,12 @@
 #undef this
 #define this (*ptObj)
 
+#if QUEUE_INT_SAFE
+#define __queue_protect() SAFE_ATOM_CODE
+#else
+#define __queue_protect()
+#endif
+
 byte_queue_t *queue_init(byte_queue_t *ptObj, void *pBuffer,
                          uint16_t hwItemSize) {
   if (pBuffer == NULL || hwItemSize == 0 || ptObj == NULL) {

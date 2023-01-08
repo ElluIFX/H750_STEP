@@ -115,12 +115,15 @@ int main(void) {
   ENQUEUE(&queue_1, "d", 1);
   int cnt = QUEUE_COUNT(&queue_1);
   LOG_I("inqueue: %d", cnt);
-  CSTRING_BUFFER(str);
+  string str_ = string_create(0);
   char temp[2] = {0};
   while (QUEUE_PEEK(&queue_1, temp, 1)) {
-    cstring_cat(str, temp);
+    string_push_back(str_, temp[0]);
   }
-  LOG_D("peek: %s", str->str->cstr);
+  LOG_D("peek: %s", string_c_str(str_));
+  string str_2 = string_duplicate(str_);
+  string_insert(str_,str_2, 4);
+  LOG_D("insert: %s", string_c_str(str_));
   LOG_I("inqueue: %d", QUEUE_COUNT(&queue_1));
   /* USER CODE END 2 */
 
