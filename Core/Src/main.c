@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "candy.h"
+#include "cstring.h"
 #include "queue.h"
 #include "scheduler.h"
 #include "step.h"
@@ -108,18 +109,18 @@ int main(void) {
   Step_Set_Speed(&step_1, 1200);
   RGB(0, 0, 0);
   QUEUE_INIT(&queue_1, queueBuffer);
-  LOG_I("inqueue: %d", QUEUE_COUNT(&queue_1));
 
-  ENQUEUE(&queue_1, (char)'1');
-  ENQUEUE(&queue_1, "23", 2);
-  ENQUEUE(&queue_1, "4", 1);
+  ENQUEUE(&queue_1, (char)'a');
+  ENQUEUE(&queue_1, "BC", 2);
+  ENQUEUE(&queue_1, "d", 1);
   int cnt = QUEUE_COUNT(&queue_1);
   LOG_I("inqueue: %d", cnt);
-  for (uint16_t i = 0; i < cnt; i++) {
-    LOG_I("peek: %c", QUEUE_PEEK(&queue_1));
-    LOG_I("peek: %c", QUEUE_PEEK(&queue_1));
-    LOG_I("dequeue: %c", DEQUEUE(&queue_1));
+  CSTRING_BUFFER(str);
+  char temp[2] = {0};
+  while (QUEUE_PEEK(&queue_1, temp, 1)) {
+    cstring_cat(str, temp);
   }
+  LOG_D("peek: %s", str->str->cstr);
   LOG_I("inqueue: %d", QUEUE_COUNT(&queue_1));
   /* USER CODE END 2 */
 

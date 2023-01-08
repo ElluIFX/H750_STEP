@@ -61,7 +61,8 @@ void RGB(uint8_t r, uint8_t g, uint8_t b);
 // 获取参数个数
 #define VA_NUM_ARGS(...) \
   VA_NUM_ARGS_IMPL(0, ##__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
-
+// 安全名称
+#define SAFE_NAME(__NAME) CONNECT3(__, __NAME, __LINE__)
 // 连接宏
 #define CONNECT(...) CONNECT2(CONNECT, VA_NUM_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
@@ -69,63 +70,62 @@ void RGB(uint8_t r, uint8_t g, uint8_t b);
 #define EVAL(__FUNC, ...) CONNECT2(__FUNC, VA_NUM_ARGS(__VA_ARGS__))
 
 // using
-#define __using_1(__declare)                                  \
-  for (__declare, *CONNECT3(__using_, __LINE__, _ptr) = NULL; \
-       CONNECT3(__using_, __LINE__, _ptr)++ == NULL;)
+#define __using_1(__declare) \
+  for (__declare, *SAFE_NAME(using_ptr) = NULL; SAFE_NAME(using_ptr)++ == NULL;)
 
-#define __using_2(__declare, __on_leave_expr)                 \
-  for (__declare, *CONNECT3(__using_, __LINE__, _ptr) = NULL; \
-       CONNECT3(__using_, __LINE__, _ptr)++ == NULL; __on_leave_expr)
+#define __using_2(__declare, __on_leave_expr)   \
+  for (__declare, *SAFE_NAME(using_ptr) = NULL; \
+       SAFE_NAME(using_ptr)++ == NULL; __on_leave_expr)
 
-#define __using_3(__declare, __on_enter_expr, __on_leave_expr)               \
-  for (__declare, *CONNECT3(__using_, __LINE__, _ptr) = NULL;                \
-       CONNECT3(__using_, __LINE__, _ptr)++ == NULL ? ((__on_enter_expr), 1) \
-                                                    : 0;                     \
+#define __using_3(__declare, __on_enter_expr, __on_leave_expr)      \
+  for (__declare, *SAFE_NAME(using_ptr) = NULL;                     \
+       SAFE_NAME(using_ptr)++ == NULL ? ((__on_enter_expr), 1) : 0; \
        __on_leave_expr)
 
 // 局部变量 args: 局部变量 [进入代码] [离开代码]
 #define using(...) EVAL(__using_, __VA_ARGS__)(__VA_ARGS__)
 
-#define __LINE_NAME(__NAME) CONNECT3(__, __NAME, __LINE__)
-
 // 保证原子性的代码块，不会被中断打断
-#define SAFE_ATOM_CODE                                   \
-  using(uint32_t __LINE_NAME(temp) = ({                  \
-          uint32_t __LINE_NAME(temp2) = __get_PRIMASK(); \
-          __disable_irq();                               \
-          __LINE_NAME(temp2);                            \
-        }),                                              \
-        __set_PRIMASK(__LINE_NAME(temp)))
+#define SAFE_ATOM_CODE                                 \
+  using(uint32_t SAFE_NAME(temp) = ({                  \
+          uint32_t SAFE_NAME(temp2) = __get_PRIMASK(); \
+          __disable_irq();                             \
+          SAFE_NAME(temp2);                            \
+        }),                                            \
+        __set_PRIMASK(SAFE_NAME(temp)))
 
-// 数组长度
-#define dimof(__array) (sizeof(__array) / sizeof(__array[0]))
+#define __size_of_array(__array) \
+  _Generic((__array), \
+                                          char *: sizeof(*(__array)), \
+                                          default: sizeof(__array))
+#define __dim_of_1(__array) (sizeof(__array) / sizeof((__array[0]))
+#define __dim_of_2(__array, __type) (sizeof(__array) / sizeof(__type))
+// 数组长度 args: 数组 [元素类型]
+#define dimof(...) EVAL(__dim_of_, __VA_ARGS__)(__VA_ARGS__)
 
-#define __foreach_2(__array, __type)                                         \
-  using(__type * _ = __array) for (uint_fast32_t CONNECT2(count, __LINE__) = \
-                                       dimof(__array);                       \
-                                   CONNECT2(count, __LINE__) > 0;            \
-                                   _++, CONNECT2(count, __LINE__)--)
+#define __foreach_2(__array, __type)                              \
+  using(__type * _ = __array) for (uint_fast32_t SAFE_NAME(cnt) = \
+                                       dimof(__array, __type);    \
+                                   SAFE_NAME(cnt) > 0; _++, SAFE_NAME(cnt)--)
 
 #define __foreach_1(__array) __foreach_2(__array, typeof(*(__array)))
-#define __foreach_3(__array, __type, __pt)                                   \
-  using(__type * __pt = __array) for (uint_fast32_t CONNECT2(                \
-                                          count, __LINE__) = dimof(__array); \
-                                      CONNECT2(count, __LINE__) > 0;         \
-                                      __pt++, CONNECT2(count, __LINE__)--)
-#define __foreach_reverse_2(__array, __type)                           \
-  using(__type * _ = __array + dimof(__array) -                        \
-                     1) for (uint_fast32_t CONNECT2(count, __LINE__) = \
-                                 dimof(__array);                       \
-                             CONNECT2(count, __LINE__) > 0;            \
-                             _--, CONNECT2(count, __LINE__)--)
+#define __foreach_3(__array, __type, __pt)                          \
+  using(__type * __pt =                                             \
+            __array) for (uint_fast32_t CONNECT2(count, __LINE__) = \
+                              dimof(__array, __type);               \
+                          SAFE_NAME(cnt) > 0; __pt++, SAFE_NAME(cnt)--)
+#define __foreach_reverse_2(__array, __type)                \
+  using(__type * _ = __array + dimof(__array, __type) -     \
+                     1) for (uint_fast32_t SAFE_NAME(cnt) = \
+                                 dimof(__array, __type);    \
+                             SAFE_NAME(cnt) > 0; _--, SAFE_NAME(cnt)--)
 #define __foreach_reverse_1(__array) \
   __foreach_reverse_2(__array, typeof(*(__array)))
-#define __foreach_reverse_3(__array, __type, __pt)                        \
-  using(__type * __pt = __array + dimof(__array) -                        \
-                        1) for (uint_fast32_t CONNECT2(count, __LINE__) = \
-                                    dimof(__array);                       \
-                                CONNECT2(count, __LINE__) > 0;            \
-                                __pt--, CONNECT2(count, __LINE__)--)
+#define __foreach_reverse_3(__array, __type, __pt)             \
+  using(__type * __pt = __array + dimof(__array, __type) -     \
+                        1) for (uint_fast32_t SAFE_NAME(cnt) = \
+                                    dimof(__array, __type);    \
+                                SAFE_NAME(cnt) > 0; __pt--, SAFE_NAME(cnt)--)
 
 // 遍历数组 args: 数组 [元素类型] [元素指针名(默认为'_')]
 #define foreach(...) EVAL(__foreach_, __VA_ARGS__)(__VA_ARGS__)

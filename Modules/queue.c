@@ -173,7 +173,7 @@ int16_t queue_get_available(byte_queue_t *ptObj) {
   return (this.hwSize - this.hwLength);
 }
 
-bool is_peek_empty(byte_queue_t *ptObj) {
+bool queue_peek_check_empty(byte_queue_t *ptObj) {
   if (ptObj == NULL) {
     return false;
   }

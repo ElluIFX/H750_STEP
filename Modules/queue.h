@@ -19,9 +19,9 @@
 
 #define __DEQUEUE_0(__QUEUE)                       \
   ({                                               \
-    uint8_t __LINE_NAME(temp);                     \
-    queue_out_byte((__QUEUE), &__LINE_NAME(temp)); \
-    __LINE_NAME(temp);                             \
+    uint8_t SAFE_NAME(temp);                     \
+    queue_out_byte((__QUEUE), &SAFE_NAME(temp)); \
+    SAFE_NAME(temp);                             \
   })
 #define __DEQUEUE_1(__QUEUE, __ADDR) \
   queue_out((__QUEUE), __ADDR, (sizeof(typeof(*(__ADDR)))))
@@ -34,8 +34,8 @@
 
 #define __ENQUEUE_0__(__QUEUE, __VALUE)                            \
   do {                                                             \
-    typeof((__VALUE)) __LINE_NAME(value) = __VALUE;                \
-    queue_in((__QUEUE), &(__LINE_NAME(value)), (sizeof(__VALUE))); \
+    typeof((__VALUE)) SAFE_NAME(value) = __VALUE;                \
+    queue_in((__QUEUE), &(SAFE_NAME(value)), (sizeof(__VALUE))); \
   } while (0)
 
 #define __ENQUEUE_0(__QUEUE, __VALUE) __ENQUEUE_0__(__QUEUE, __VALUE)
@@ -47,9 +47,9 @@
   queue_in((__QUEUE), (__ADDR), (__ITEM_COUNT * sizeof(__TYPE)))
 #define __QUEUE_PEEK_0(__QUEUE)                     \
   ({                                                \
-    uint8_t __LINE_NAME(temp);                      \
-    queue_peek_byte((__QUEUE), &__LINE_NAME(temp)); \
-    __LINE_NAME(temp);                              \
+    uint8_t SAFE_NAME(temp);                      \
+    queue_peek_byte((__QUEUE), &SAFE_NAME(temp)); \
+    SAFE_NAME(temp);                              \
   })
 #define __QUEUE_PEEK_1(__QUEUE, __ADDR) \
   queue_peek((__QUEUE), (__ADDR), (sizeof(typeof(*(__ADDR)))))
