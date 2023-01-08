@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "stdarg.h"
 
 
 #if CSTRING_DEBUG
@@ -16,6 +17,8 @@ void cstring_log(const char *function, const char *text) {
 
 void *cstring_alloc(size_t size) {
   void *ptr = malloc(size);
+  // use calloc to zero the memory
+  // void *ptr = calloc(1, size);
   if (!ptr) {
     LOG("cstring_alloc", "Bad Alloc, Abort...");
     while (true)
@@ -58,19 +61,6 @@ void string_copy(string dest, const string src) {
 }
 
 string string_duplicate(const string this) { return string_create(this->data); }
-
-void string_print(const string this) {
-  if (this->data == NULL) {
-    fputs("(null)", stdout);
-    return;
-  }
-  fputs(this->data, stdout);
-}
-
-void string_println(const string this) {
-  string_print(this);
-  fputs("\n", stdout);
-}
 
 void string_clear(string this) { string_assign(this, ""); }
 
@@ -276,4 +266,20 @@ string string_substr(const string this, size_t pos, size_t len) {
   for (size_t i = 0; pos < string_size(this) && i < len; i++, pos++)
     string_push_back(tmp, string_at(this, pos));
   return tmp;
+}
+
+size_t string_printf(string this, const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  size_t size = vsnprintf(NULL, 0, format, args);
+  va_end(args);
+
+  char *tmp = cstring_alloc(sizeof(char) * (size + 1));
+  va_start(args, format);
+  vsnprintf(tmp, size + 1, format, args);
+  va_end(args);
+
+  string_assign(this, tmp);
+  free(tmp);
+  return size;
 }

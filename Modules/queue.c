@@ -19,8 +19,7 @@
 #define __queue_protect()
 #endif
 
-byte_queue_t *queue_init(byte_queue_t *ptObj, void *pBuffer,
-                         uint16_t hwItemSize) {
+queue_t *queue_init(queue_t *ptObj, void *pBuffer, uint16_t hwItemSize) {
   if (pBuffer == NULL || hwItemSize == 0 || ptObj == NULL) {
     return NULL;
   }
@@ -37,7 +36,7 @@ byte_queue_t *queue_init(byte_queue_t *ptObj, void *pBuffer,
   return ptObj;
 }
 
-bool queue_in_byte(byte_queue_t *ptObj, uint8_t chByte) {
+bool queue_in_byte(queue_t *ptObj, uint8_t chByte) {
   if (ptObj == NULL) {
     return false;
   }
@@ -59,7 +58,7 @@ bool queue_in_byte(byte_queue_t *ptObj, uint8_t chByte) {
   return true;
 }
 
-int16_t queue_in(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength) {
+int16_t queue_in(queue_t *ptObj, void *pchByte, uint16_t hwLength) {
   if (ptObj == NULL) {
     return -1;
   }
@@ -93,7 +92,7 @@ int16_t queue_in(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength) {
   return hwLength;
 }
 
-bool queue_out_byte(byte_queue_t *ptObj, uint8_t *pchByte) {
+bool queue_out_byte(queue_t *ptObj, uint8_t *pchByte) {
   if (pchByte == NULL || ptObj == NULL) {
     return false;
   }
@@ -116,7 +115,7 @@ bool queue_out_byte(byte_queue_t *ptObj, uint8_t *pchByte) {
   return true;
 }
 
-int16_t queue_out(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength) {
+int16_t queue_out(queue_t *ptObj, void *pchByte, uint16_t hwLength) {
   if (pchByte == NULL || ptObj == NULL) {
     return -1;
   }
@@ -151,7 +150,7 @@ int16_t queue_out(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength) {
   return hwLength;
 }
 
-bool queue_check_empty(byte_queue_t *ptObj) {
+bool queue_check_empty(queue_t *ptObj) {
   if (ptObj == NULL) {
     return false;
   }
@@ -163,7 +162,7 @@ bool queue_check_empty(byte_queue_t *ptObj) {
   return false;
 }
 
-int16_t queue_get_count(byte_queue_t *ptObj) {
+int16_t queue_get_count(queue_t *ptObj) {
   if (ptObj == NULL) {
     return -1;
   }
@@ -171,7 +170,7 @@ int16_t queue_get_count(byte_queue_t *ptObj) {
   return (this.hwLength);
 }
 
-int16_t queue_get_available(byte_queue_t *ptObj) {
+int16_t queue_get_available(queue_t *ptObj) {
   if (ptObj == NULL) {
     return -1;
   }
@@ -179,7 +178,7 @@ int16_t queue_get_available(byte_queue_t *ptObj) {
   return (this.hwSize - this.hwLength);
 }
 
-bool queue_peek_check_empty(byte_queue_t *ptObj) {
+bool queue_peek_check_empty(queue_t *ptObj) {
   if (ptObj == NULL) {
     return false;
   }
@@ -191,7 +190,7 @@ bool queue_peek_check_empty(byte_queue_t *ptObj) {
   return false;
 }
 
-bool queue_peek_byte(byte_queue_t *ptObj, uint8_t *pchByte) {
+bool queue_peek_byte(queue_t *ptObj, uint8_t *pchByte) {
   if (ptObj == NULL || pchByte == NULL) {
     return false;
   }
@@ -212,7 +211,7 @@ bool queue_peek_byte(byte_queue_t *ptObj, uint8_t *pchByte) {
   return true;
 }
 
-int16_t queue_peek(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength) {
+int16_t queue_peek(queue_t *ptObj, void *pchByte, uint16_t hwLength) {
   if (ptObj == NULL || pchByte == NULL) {
     return -1;
   }
@@ -245,7 +244,7 @@ int16_t queue_peek(byte_queue_t *ptObj, void *pchByte, uint16_t hwLength) {
   return hwLength;
 }
 
-bool queue_reset_peek_pos(byte_queue_t *ptObj) {
+bool queue_reset_peek_pos(queue_t *ptObj) {
   if (ptObj == NULL) {
     return false;
   }
@@ -257,7 +256,7 @@ bool queue_reset_peek_pos(byte_queue_t *ptObj) {
   return true;
 }
 
-bool queue_pop_peeked(byte_queue_t *ptObj) {
+bool queue_pop_peeked(queue_t *ptObj) {
   if (ptObj == NULL) {
     return false;
   }
@@ -269,7 +268,7 @@ bool queue_pop_peeked(byte_queue_t *ptObj) {
   return true;
 }
 
-uint16_t queue_get_peek_pos(byte_queue_t *ptObj) {
+uint16_t queue_get_peek_pos(queue_t *ptObj) {
   uint16_t hwCount;
 
   if (ptObj == NULL) {
@@ -286,7 +285,7 @@ uint16_t queue_get_peek_pos(byte_queue_t *ptObj) {
   return hwCount;
 }
 
-bool queue_set_peek_pos(byte_queue_t *ptObj, uint16_t hwCount) {
+bool queue_set_peek_pos(queue_t *ptObj, uint16_t hwCount) {
   if (ptObj == NULL) {
     return false;
   }
@@ -301,4 +300,56 @@ bool queue_set_peek_pos(byte_queue_t *ptObj, uint16_t hwCount) {
     this.hwPeekLength = this.hwPeekLength - hwCount;
   }
   return true;
+}
+
+#include "uartPack.h"
+#define DBG_PRINT LOG_RAW
+
+void queue_debug(queue_t *ptObj) {
+  if (ptObj == NULL) {
+    return;
+  }
+  DBG_PRINT("\r\n[DEBUG] len:%d head:%d tail:%d\r\n", this.hwLength,
+            this.hwHead, this.hwTail);
+  char line[24 + 4 + 16 + 1] = {0};
+  memset(line, ' ', 24 + 4 + 16);  // space
+  // print full line
+  uint8_t tmp = 0;
+  uint16_t i = 0;
+  for (; i < this.hwLength / 8; i++) {
+    for (uint16_t j = 0; j < 8; j++) {
+      tmp = this.pchBuffer[this.hwHead + i * 8 + j];
+      sprintf(line + j * 3, "%02X", tmp);
+      line[j * 3 + 2] = ' ';  // remove '\0'
+      if (tmp > 31 && tmp < 127) {
+        line[24 + 4 + j * 2] = tmp;  // ASCII
+      } else {
+        line[24 + 4 + j * 2] = '.';
+      }
+    }
+    DBG_PRINT("%3d: %s\r\n", i * 8, line);
+  }
+  // print last line
+  if (this.hwLength % 8) {
+    memset(line, ' ', 24 + 4 + 8);  // space
+    for (uint16_t j = 0; j < 8; j++) {
+      if (j < this.hwLength % 8) {
+        tmp = this.pchBuffer[this.hwHead + (this.hwLength / 8) * 8 + j];
+        sprintf(line + j * 3, "%02X", tmp);
+        line[j * 3 + 2] = ' ';  // remove '\0'
+        if (tmp > 31 && tmp < 127) {
+          line[24 + 4 + j * 2] = tmp;  // ASCII
+        } else {
+          line[24 + 4 + j * 2] = '.';
+        }
+      } else {
+        line[j * 3] = '_';
+        line[j * 3 + 1] = '_';
+        line[24 + 4 + j * 2] = '.';
+      }
+    }
+    DBG_PRINT("%3d: %s\r\n\r\n", i * 8, line);
+  }else{
+    DBG_PRINT("\r\n");
+  }
 }

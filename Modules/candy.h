@@ -95,9 +95,7 @@ void RGB(uint8_t r, uint8_t g, uint8_t b);
         __set_PRIMASK(SAFE_NAME(temp)))
 
 #define __size_of_array(__array) \
-  _Generic((__array), \
-                                          char *: sizeof(*(__array)), \
-                                          default: sizeof(__array))
+  _Generic((__array), char * : sizeof(*(__array)), default : sizeof(__array))
 #define __dim_of_1(__array) (sizeof(__array) / sizeof((__array[0]))
 #define __dim_of_2(__array, __type) (sizeof(__array) / sizeof(__type))
 // 数组长度 args: 数组 [元素类型]

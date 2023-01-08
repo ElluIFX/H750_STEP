@@ -24,14 +24,6 @@ void string_copy(string dest, const string src);
  */
 string string_duplicate(const string this);
 /**
- *  Print the current value of a [string] object
- */
-void string_print(const string this);
-/**
- *  Print the current value of a [string] object followed by an endline
- */
-void string_println(const string this);
-/**
  *  Clear a [string] object
  */
 void string_clear(string this);
@@ -143,3 +135,7 @@ size_t string_rfind(const string this, const string to_find);
  *  @returns A string object with a substring of this object
  */
 string string_substr(const string this, size_t pos, size_t len);
+/**
+ * @brief Write content into string like printf
+ */
+size_t string_printf(string this, const char *format, ...);
