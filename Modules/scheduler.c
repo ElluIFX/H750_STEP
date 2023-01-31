@@ -14,24 +14,20 @@
 #include <scheduler.h>
 #include <uart_pack.h>
 #include <stdio.h>
+#include "app.h"
 /************************ scheduler tasks ************************/
 
 // task lists
 static scheduler_task_t schTaskList[] = {
-    {Task_Uart_Controller, 20, 0, 0, 1},
+    {UserCom_Task, 100, 0, 0, 1},
     {Task_Uart_Overtime, 100, 0, 0, 1},
-    {Task_Key_Func, 50, 0, 0, 0},
     {key_check_all_loop_1ms, 1000, 0, 0, 1},
-    {Task_Param_Report, 20, 0, 0, 0},
 #if _ENABLE_SCH_DEBUG
     {Show_Sch_Debug_info, 0.2, 0, 0, 1},
 #endif
 };
 
-__weak void Task_Uart_Controller(void) { return; }
 __weak void Task_Uart_Overtime(void) { return; }
-__weak void Task_Key_Func(void) { return; }
-__weak void Task_Param_Report(void) { return; }
 // @note !redefined in main.c
 
 /************************ scheduler tasks end ************************/
