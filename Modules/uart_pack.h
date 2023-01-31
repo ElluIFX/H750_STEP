@@ -14,10 +14,16 @@
 #include "stdio.h"
 #include "usart.h"
 // private define
+// 调试信息设置
 #define _DEBUG_UART_PORT huart1  // 调试串口
 #define _ENABLE_LOG 1            // 是否输出调试信息
 #define _ENABLE_LOG_TIMESTAMP 0  // 调试信息是否添加时间戳
 #define _ENABLE_LOG_COLOR 1      // 调试信息是否按等级添加颜色
+// 调试信息等级
+#define _ENABLE_LOG_DEBUG 1  // 是否输出DEBUG信息
+#define _ENABLE_LOG_INFO 1   // 是否输出INFO信息
+#define _ENABLE_LOG_WARN 1   // 是否输出WARN信息
+#define _ENABLE_LOG_ERROR 1  // 是否输出ERROR信息
 
 #define printf(...) printft(&_DEBUG_UART_PORT, __VA_ARGS__)
 // constants
@@ -72,16 +78,33 @@ typedef struct {                         // 单结束位型UART控制结构体
 #define _DBG_LOG(level, color, fmt, args...) \
   _LOG_PRINTF("[" level "] " fmt "\r\n", ##args)
 #endif
+#if _ENABLE_LOG_DEBUG
 #define LOG_D(fmt, args...) _DBG_LOG("D", 36, fmt, ##args)
+#endif
+#if _ENABLE_LOG_INFO
 #define LOG_I(fmt, args...) _DBG_LOG("I", 32, fmt, ##args)
+#endif
+#if _ENABLE_LOG_WARN
 #define LOG_W(fmt, args...) _DBG_LOG("W", 33, fmt, ##args)
+#endif
+#if _ENABLE_LOG_ERROR
 #define LOG_E(fmt, args...) _DBG_LOG("E", 31, fmt, ##args)
+#endif
 #define LOG_RAW(fmt, args...) _LOG_PRINTF(fmt, ##args)
-#else
+#endif  // _ENABLE_LOG
+#ifndef LOG_D
 #define LOG_D(...) ((void)0)
+#endif
+#ifndef LOG_I
 #define LOG_I(...) ((void)0)
+#endif
+#ifndef LOG_W
 #define LOG_W(...) ((void)0)
+#endif
+#ifndef LOG_E
 #define LOG_E(...) ((void)0)
+#endif
+#ifndef LOG_RAW
 #define LOG_RAW(...) ((void)0)
 #endif
 
