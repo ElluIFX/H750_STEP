@@ -302,7 +302,7 @@ bool queue_set_peek_pos(queue_t *ptObj, uint16_t hwCount) {
   return true;
 }
 
-#include "uartPack.h"
+#include "uart_pack.h"
 #define DBG_PRINT LOG_RAW
 
 void queue_debug(queue_t *ptObj) {

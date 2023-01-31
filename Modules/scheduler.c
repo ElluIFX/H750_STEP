@@ -12,7 +12,7 @@
 
 #include <key.h>
 #include <scheduler.h>
-#include <uartPack.h>
+#include <uart_pack.h>
 #include <stdio.h>
 /************************ scheduler tasks ************************/
 
@@ -20,7 +20,7 @@
 static scheduler_task_t schTaskList[] = {
     {Task_Uart_Controller, 20, 0, 0, 1},
     {Task_Uart_Overtime, 100, 0, 0, 1},
-    {Task_Key_Func, 50, 0, 0, 1},
+    {Task_Key_Func, 50, 0, 0, 0},
     {key_check_all_loop_1ms, 1000, 0, 0, 1},
     {Task_Param_Report, 20, 0, 0, 0},
 #if _ENABLE_SCH_DEBUG

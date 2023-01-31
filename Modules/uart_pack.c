@@ -1,5 +1,5 @@
 /**
- * @file uartPack.c
+ * @file uart_pack.c
  * @brief
  * 封装了一些串口函数，包括串口发送和接收，串口发送和接收的数据类型都是uint8_t
  * ，接受分为两种，一种是超时判定，一种是结束位判定
@@ -10,7 +10,7 @@
  * THINK DIFFERENTLY
  */
 
-#include "uartPack.h"
+#include "uart_pack.h"
 
 #include "stdarg.h"
 #include "string.h"

@@ -31,7 +31,7 @@
 #include "queue.h"
 #include "scheduler.h"
 #include "step.h"
-#include "uartPack.h"
+#include "uart_pack.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -172,10 +172,7 @@ void SystemClock_Config(void) {
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-  if (huart->Instance == USART1) {
-  }
-}
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
@@ -183,45 +180,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   }
 }
 void Task_Uart_Overtime(void) { Uart_O_Timeout_Check(&uart_1); }
-void Task_Uart_Controller(void) {
-  static uint8_t controlWord = 0;
-  static double temp = 0;
-  if (RX_DONE(uart_1)) {
-    RX_CLEAR(uart_1);
-    controlWord = RX_DATA(uart_1)[0];
-    switch (controlWord) {
-      case 's':
-        if (sscanf(RX_DATA(uart_1), "s:%lf", &temp) == 1) {
-          Step_Set_Speed(&step_1, temp);
-        }
-        break;
-      case 'r':
-        if (sscanf(RX_DATA(uart_1), "r:%lf", &temp) == 1) {
-          Step_Rotate(&step_1, temp);
-        }
-        break;
-      case 'g':
-        if (sscanf(RX_DATA(uart_1), "g:%lf", &temp) == 1) {
-          Step_Rotate_Abs(&step_1, temp);
-        }
-        break;
-      case '0':
-        Step_Set_Angle(&step_1, 0);
-        break;
-      case 'p':
-        Step_Stop(&step_1);
-        break;
-      default:
-        LOG_W("Unknown command");
-        break;
-    }
-  }
-  // printf("tim2: %d\n", __HAL_TIM_GET_COUNTER(&htim2));
-}
-
-void Task_Param_Report(void) {
-  printf("Step: %lf\r\n", Step_Get_Angle(&step_1));
-}
+void Task_Uart_Controller(void) {}
+void Task_Param_Report(void) {}
 
 // TIM interrupt
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {

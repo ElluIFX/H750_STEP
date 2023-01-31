@@ -1,5 +1,5 @@
 /**
- * @file programCtrl.c
+ * @file program_ctrl.c
  * @brief 顺序执行程序控制器，控制程序的执行顺序，以及程序的暂停和恢复
  * @author Ellu (lutaoyu@163.com)
  * @version 1.0
@@ -8,7 +8,7 @@
  * THINK DIFFERENTLY
  */
 
-#include "programCtrl.h"
+#include "program_ctrl.h"
 #include "stdio.h"
 #include "candy.h"
 // variables

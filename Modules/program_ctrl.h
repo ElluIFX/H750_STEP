@@ -1,5 +1,5 @@
 /**
- * @file programCtrl.h
+ * @file program_ctrl.h
  * @author Ellu (lutaoyu@163.com)
  * @version 1.0
  * @date 2021-12-13
@@ -7,8 +7,8 @@
  * THINK DIFFERENTLY
  */
 
-#ifndef _PROGRAMCTRL_H_
-#define _PROGRAMCTRL_H_
+#ifndef _PROGRAM_CTRL_H_
+#define _PROGRAM_CTRL_H_
 #include "main.h"
 
 // typedef
@@ -44,4 +44,4 @@ void Reset_User_Task(void);
 void Task_Breakout_Handler(void);
 void Task_Done_Handler(void);
 
-#endif  // _PROGRAMCTRL_H_
+#endif  // _PROGRAM_CTRL_H_

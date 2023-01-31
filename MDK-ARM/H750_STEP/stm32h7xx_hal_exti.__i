@@ -1,0 +1,6 @@
+--c99 --gnu -c --cpu Cortex-M7.fp.dp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include
+-I.\RTE\_H750_STEP
+-IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.9.0\CMSIS\Core\Include
+-IC:\Keil_v5\ARM\PACK\Keil\STM32H7xx_DFP\2.7.0\Drivers\CMSIS\Device\ST\STM32H7xx\Include
+-D__UVISION_VERSION="537" -D_RTE_ -DSTM32H750xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H750xx
+-o h750_step\stm32h7xx_hal_exti.o --omf_browse h750_step\stm32h7xx_hal_exti.crf --depend h750_step\stm32h7xx_hal_exti.d "../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c"
