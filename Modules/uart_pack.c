@@ -33,9 +33,9 @@ int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
   sendLen = vsprintf(sendBuff, fmt, ap);
   va_end(ap);
   if (sendLen > 0) {
-    HAL_UART_Transmit_IT(huart, (uint8_t *)sendBuff, sendLen);
     while (huart->gState != HAL_UART_STATE_READY) {
     }
+    HAL_UART_Transmit_IT(huart, (uint8_t *)sendBuff, sendLen);
   }
   return sendLen;
 }

@@ -19,10 +19,10 @@ void UserCom_SendData(uint8_t* dataToSend, uint8_t Length);
 void UserCom_SendAck(uint8_t ack_data);
 void UserCom_CalcAck(uint8_t option, uint8_t* data_p, uint8_t data_len);
 
-static uint8_t user_connected = 0;           // 用户下位机是否连接
-static uint16_t user_heartbeat_cnt = 0;      // 用户下位机心跳计数
-_to_user_un to_user_data;                    // 回传状态数据
-_user_ack_st user_ack;                       // ACK数据
+static uint8_t user_connected = 0;       // 用户下位机是否连接
+static uint16_t user_heartbeat_cnt = 0;  // 用户下位机心跳计数
+_to_user_un to_user_data;                // 回传状态数据
+_user_ack_st user_ack;                   // ACK数据
 
 /**
  * @brief 用户协议数据获取,在串口中断中调用,解析完成后调用UserCom_DataAnl
@@ -103,36 +103,27 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
         user_heartbeat_cnt = 0;
         break;
       }
-    case 0x01:  // 本地处理
-      suboption = p_data[0];
-      switch (suboption) {
-        case 0x01:                  // WS2812控制
-          if (p_data[4] == 0x11) {  // 帧结尾，确保接收完整
-            uint32_t_temp = 0xff000000;
-            uint8_t_temp = p_data[1];  // R
-            uint32_t_temp |= uint8_t_temp << 16;
-            uint8_t_temp = p_data[2];  // G
-            uint32_t_temp |= uint8_t_temp << 8;
-            uint8_t_temp = p_data[3];  // B
-            uint32_t_temp |= uint8_t_temp;
-            LOG_D("WS2812 color:#%08x", uint32_t_temp);
-          }
-          break;
-        case 0x02:
-          break;
-        case 0x03:
-          break;
-        case 0x04:
-          break;
-        case 0x05:
-          break;
-        case 0x06:
-          break; 
+    case 0x01:                  // WS2812控制
+      if (p_data[3] == 0x11) {  // 帧结尾，确保接收完整
+        uint32_t_temp = 0xff000000;
+        uint32_t_temp |= p_data[0] << 16;
+        uint32_t_temp |= p_data[1] << 8;
+        uint32_t_temp |= p_data[2];
+        LOG_D("WS2812 color:#%08x", uint32_t_temp);
       }
       break;
     case 0x02:
       break;
+    case 0x03:
+      break;
+    case 0x04:
+      break;
+    case 0x05:
+      break;
+    case 0x06:
+      break;
     default:
+      LOG_E("usercom unknown option: 0x%02x", option);
       break;
   }
 }
