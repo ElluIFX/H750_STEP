@@ -11,8 +11,12 @@
 #include "app.h"
 
 #include "queue.h"
+#include "step.h"
 #include "uart_pack.h"
 #include "usart.h"
+extern step_ctrl_t step_1;
+extern step_ctrl_t step_2;
+extern step_ctrl_t step_3;
 
 void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len);
 void UserCom_DataExchange(void);
@@ -83,6 +87,7 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
   static uint32_t* p_uint32_t;
   static uint8_t uint8_t_temp;
   static uint32_t uint32_t_temp;
+  static double double_temp;
 
   p_data = (uint8_t*)(data_buf + 4);
   option = data_buf[2];
@@ -93,7 +98,7 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
     calc_check += data_buf[i];
   }
   if (calc_check != recv_check) {
-    LOG_E("usercom checksum error");
+    LOG_E("[COM] checksum ERR");
     return;
   }
   switch (option) {
@@ -101,31 +106,53 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       if (p_data[0] == 0x01) {
         if (!user_connected) {
           user_connected = 1;
-          LOG_I("user connected");
+          LOG_I("[COM] connected");
         }
         user_heartbeat_cnt = 0;
         break;
       }
-    case 0x01:  // WS2812控制
-      uint32_t_temp = 0xff000000;
-      uint32_t_temp |= p_data[0] << 16;
-      uint32_t_temp |= p_data[1] << 8;
-      uint32_t_temp |= p_data[2];
-      LOG_D("WS2812 color:#%08x", uint32_t_temp);
-      UserCom_SendAck(option, p_data, 3);
+    case 0x01:  // 步进电机速度设置
+      uint8_t_temp = p_data[0];
+      p_int32_t = (int32_t*)(p_data + 1);
+      double_temp = (double)(*p_int32_t) / 100.0;
+      LOG_D("[COM] set step speed: 0x%02x, %f", uint8_t_temp, double_temp);
+      if (uint8_t_temp & 0x01) Step_Set_Speed(&step_1, double_temp);
+      if (uint8_t_temp & 0x02) Step_Set_Speed(&step_2, double_temp);
+      if (uint8_t_temp & 0x04) Step_Set_Speed(&step_3, double_temp);
+      UserCom_SendAck(option, p_data, 5);
       break;
-    case 0x02:
+    case 0x02:  // 步进电机角度设置
+      uint8_t_temp = p_data[0];
+      p_int32_t = (int32_t*)(p_data + 1);
+      double_temp = (double)(*p_int32_t) / 100.0;
+      LOG_D("[COM] set step angle: 0x%02x, %f", uint8_t_temp, double_temp);
+      if (uint8_t_temp & 0x01) Step_Set_Angle(&step_1, double_temp);
+      if (uint8_t_temp & 0x02) Step_Set_Angle(&step_2, double_temp);
+      if (uint8_t_temp & 0x04) Step_Set_Angle(&step_3, double_temp);
+      UserCom_SendAck(option, p_data, 5);
       break;
-    case 0x03:
+    case 0x03: // 步进电机相对旋转
+      uint8_t_temp = p_data[0];
+      p_int32_t = (int32_t*)(p_data + 1);
+      double_temp = (double)(*p_int32_t) / 1000.0;
+      LOG_D("[COM] rotate: 0x%02x, %f", uint8_t_temp, double_temp);
+      if (uint8_t_temp & 0x01) Step_Rotate(&step_1, double_temp);
+      if (uint8_t_temp & 0x02) Step_Rotate(&step_2, double_temp);
+      if (uint8_t_temp & 0x04) Step_Rotate(&step_3, double_temp);
+      UserCom_SendAck(option, p_data, 5);
       break;
-    case 0x04:
-      break;
-    case 0x05:
-      break;
-    case 0x06:
+    case 0x04: // 步进电机绝对旋转
+      uint8_t_temp = p_data[0];
+      p_int32_t = (int32_t*)(p_data + 1);
+      double_temp = (double)(*p_int32_t) / 1000.0;
+      LOG_D("[COM] rotate abs 0x%02x, %f", uint8_t_temp, double_temp);
+      if (uint8_t_temp & 0x01) Step_Rotate_Abs(&step_1, double_temp);
+      if (uint8_t_temp & 0x02) Step_Rotate_Abs(&step_2, double_temp);
+      if (uint8_t_temp & 0x04) Step_Rotate_Abs(&step_3, double_temp);
+      UserCom_SendAck(option, p_data, 5);
       break;
     default:
-      LOG_E("usercom unknown option: 0x%02x", option);
+      LOG_E("[COM] unknown option: 0x%02x", option);
       break;
   }
 }
@@ -159,7 +186,7 @@ void UserCom_Task() {
     user_heartbeat_cnt++;
     if (user_heartbeat_cnt * dT_s >= USER_HEARTBEAT_TIMEOUT_S) {
       user_connected = 0;
-      LOG_W("user disconnected");
+      LOG_W("[COM] disconnected");
     }
 
     // ACK发送检查
@@ -189,7 +216,17 @@ void UserCom_DataExchange(void) {
   to_user_data.st_data.cmd = 0x01;
 
   // 数据赋值
-  to_user_data.st_data.test = test_data;
+  to_user_data.st_data.step1_speed = step_1.speed * 100;
+  to_user_data.st_data.step1_angle = Step_Get_Angle(&step_1) * 1000;
+  to_user_data.st_data.step1_target_angle = step_1.angleTarget * 1000;
+  to_user_data.st_data.step1_rotating = step_1.rotating;
+  to_user_data.st_data.step1_dir = step_1.dir;
+
+  to_user_data.st_data.step2_speed = step_2.speed * 100;
+  to_user_data.st_data.step2_angle = Step_Get_Angle(&step_2) * 1000;
+  to_user_data.st_data.step2_target_angle = step_2.angleTarget * 1000;
+  to_user_data.st_data.step2_rotating = step_2.rotating;
+  to_user_data.st_data.step2_dir = step_2.dir;
 
   // 校验和
   to_user_data.st_data.check_sum = 0;

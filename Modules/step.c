@@ -48,8 +48,8 @@ void Step_Init(step_ctrl_t *step, TIM_HandleTypeDef *timMaster,
  * @param  speed            速度(单位:度/秒)
  */
 void Step_Set_Speed(step_ctrl_t *step, double speed) {
-  if (speed == 0) {
-    LOG_E("Step_Set_Speed: speed is 0");
+  if (speed < 0.01 && speed > -0.01) {
+    LOG_E("[STEP] setspeed=0");
     return;
   }
   speed = fabs(speed);
@@ -63,8 +63,9 @@ void Step_Set_Speed(step_ctrl_t *step, double speed) {
     prescaler /= 2;
     period *= 2;
   }
-  LOG_D("Step_Set_Speed: speed = %f, pwmFreq = %f, PSC = %d, ARR = %d", speed,
-        pulsePerSec, prescaler, period);
+  // LOG_D("Step_Set_Speed: speed = %f, pwmFreq = %f, PSC = %d, ARR = %d",
+  // speed,
+  //       pulsePerSec, prescaler, period);
   __HAL_TIM_SET_PRESCALER(step->timMaster, prescaler - 1);
   __HAL_TIM_SET_AUTORELOAD(step->timMaster, period - 1);
   __HAL_TIM_SET_COMPARE(step->timMaster, step->timMasterCh, period / 2);
@@ -88,7 +89,7 @@ void Step_IT_Handler(step_ctrl_t *step, TIM_HandleTypeDef *htim) {
           HAL_TIM_Base_Stop_IT(step->timSlave);
           step->rotating = 0;
           step->angle = step->angleTarget;
-          LOG_I("Step stopped");
+          LOG_D("[STEP] Stop");
           return;
         } else {  // 从定时器溢出
           step->slaveTimITCnt--;
@@ -112,7 +113,7 @@ void Step_IT_Handler(step_ctrl_t *step, TIM_HandleTypeDef *htim) {
  */
 void Step_Rotate(step_ctrl_t *step, double angle) {
   if (step->rotating) {
-    LOG_E("Step_Rotate: step is rotating, command ignored");
+    LOG_E("[STEP] step busy");
     return;
   }
   step->dir = angle > 0 ? 1 : 0;
@@ -125,21 +126,22 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
   angle = fabs(angle);
   uint32_t targetPulse = angle * STEP_PULSE_PER_ROUND / 360;
   if (targetPulse < 2) {
-    LOG_E("Step_Rotate: targetPulse is too small");
+    LOG_E("[STEP] targetPulse<2");
     return;
   }
   // step->angleTarget = step->angle + angle; // 存在累加误差
   step->angleTarget = (double)targetPulse * 360 / STEP_PULSE_PER_ROUND;
   step->angleTarget = step->dir ? step->angle + step->angleTarget
                                 : step->angle - step->angleTarget;
-  LOG_D("Step_Rotate: angle = %f, pulse = %ld, dir = %d, angleT = %f", angle,
-        targetPulse, step->dir, step->angleTarget);
+  // LOG_D("Step_Rotate: angle = %f, pulse = %ld, dir = %d, angleT = %f", angle,
+  //       targetPulse, step->dir, step->angleTarget);
   step->slaveTimITCnt = targetPulse / (STEP_SLAVE_TIM_MAX_CNT + 1);
   if (step->slaveTimITCnt > 0) {
     step->slaveTimReload = targetPulse % (STEP_SLAVE_TIM_MAX_CNT + 1);
     targetPulse = STEP_SLAVE_TIM_MAX_CNT;
-    LOG_D("Step_Rotate: slaveTim ITCnt = %d, Reload = %d", step->slaveTimITCnt,
-          step->slaveTimReload);
+    // LOG_D("Step_Rotate: slaveTim ITCnt = %d, Reload = %d",
+    // step->slaveTimITCnt,
+    //       step->slaveTimReload);
   }
   __HAL_TIM_SET_COUNTER(step->timMaster, 0);
   __HAL_TIM_SET_COUNTER(step->timSlave, 0);
@@ -175,7 +177,7 @@ void Step_Stop(step_ctrl_t *step) {
   step->angle = Step_Get_Angle(step);
   __HAL_TIM_SET_COUNTER(step->timSlave, 0);
   step->rotating = 0;
-  LOG_I("Step manully stopped at %f", step->angle);
+  LOG_I("[STEP] manully stop");
 }
 
 /**

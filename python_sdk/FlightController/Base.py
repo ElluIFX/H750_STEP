@@ -113,11 +113,22 @@ class Byte_Var:
 
 
 class FC_State_Struct:
-    test = Byte_Var("u8", int, name="test")  # 测试变量
+    step1_speed = Byte_Var("s32", float, 0.01, name="step1_speed")  # deg/s
+    step1_angle = Byte_Var("s32", float, 0.001, name="step1_angle")  # deg
+    step1_target_angle = Byte_Var("s32", float, 0.001, name="step1_target_angle")  # deg
+    step1_rotating = Byte_Var("u8", bool, name="step1_rotating")  # bool
+    step1_dir = Byte_Var("u8", int, name="step1_dir")  # 0:逆时针 1:顺时针
+
+    step2_speed = Byte_Var("s32", float, 0.01, name="step2_speed")  # deg/s
+    step2_angle = Byte_Var("s32", float, 0.001, name="step2_angle")  # deg
+    step2_target_angle = Byte_Var("s32", float, 0.001, name="step2_target_angle")  # deg
+    step2_rotating = Byte_Var("u8", bool, name="step2_rotating")  # bool
+    step2_dir = Byte_Var("u8", int, name="step2_dir")  # 0:逆时针 1:顺时针
 
     RECV_ORDER = [  # 数据包顺序
-        test,
-    ]
+        step1_speed,step1_angle,step1_target_angle,step1_rotating,step1_dir,
+        step2_speed,step2_angle,step2_target_angle,step2_rotating,step2_dir,
+    ]  # fmt: skip
 
     def __init__(self):
         self._fmt_string = "<" + "".join([i.struct_fmt_type for i in self.RECV_ORDER])
@@ -212,6 +223,7 @@ class FC_Settings_Struct:
     wait_sending_timeout = 0.2  # 发送等待超时时间
     ack_max_retry = 3  # 应答失败最大重发次数
     action_log_output = True  # 是否输出动作日志
+    strict_ack_check = True  # 当ACK帧校验失败时抛出异常
 
 
 class FC_Base_Uart_Comunication(object):
@@ -296,9 +308,10 @@ class FC_Base_Uart_Comunication(object):
             for add_bit in data:
                 check_ack = (check_ack + add_bit) & 0xFF
             self._recivied_ack_dict[check_ack] = None
-            if _ack_retry_count < 0:
-                # raise Exception("Wait ACK reached max retry")
+            if _ack_retry_count <= 0:
                 logger.error("Wait ACK reached max retry")
+                if self.settings.strict_ack_check:
+                    raise Exception("Wait ACK reached max retry")
                 return None
             send_time = time.perf_counter()
         try:
@@ -312,7 +325,7 @@ class FC_Base_Uart_Comunication(object):
         if need_ack:
             while self._recivied_ack_dict[check_ack] is None:
                 if time.perf_counter() - send_time > self.settings.wait_ack_timeout:
-                    logger.warning("[FC] ACK timeout, retrying")
+                    logger.warning(f"[FC] ACK timeout, retry - {_ack_retry_count}")
                     return self.send_data_to_fc(
                         data, option, need_ack, _ack_retry_count - 1
                     )
@@ -344,7 +357,7 @@ class FC_Base_Uart_Comunication(object):
                     if self.connected:
                         self.connected = False
                         logger.warning("[FC] Disconnected")
-                for ack, recv_time in self._recivied_ack_dict.items():
+                for ack, recv_time in self._recivied_ack_dict.items():  # 超时ACK清理
                     if recv_time is not None and time.perf_counter() - recv_time > 0.5:
                         self._recivied_ack_dict.pop(ack)
                         logger.warning("[FC] Removed an unrecognized ACK")
@@ -398,14 +411,14 @@ class FC_Base_Uart_Comunication(object):
         RESET = "\033[0m"
         text = ""
         text += " ".join(
-            # var.name[0]+var.name[-1]
+            # var.name[0]+var.name[4:7]
             [
-                f"{YELLOW}{((var.name))}: {f'{GREEN}√ ' if var.value else f'{RED}x {RESET}'}"
+                f"{YELLOW}{((var.name[0]+var.name[4:7]))}: {f'{GREEN}√ ' if var.value else f'{RED}x {RESET}'}"
                 if type(var.value) == bool
                 else (
-                    f"{YELLOW}{((var.name))}:{CYAN}{var.value:^7.02f}{RESET}"
+                    f"{YELLOW}{((var.name[0]+var.name[4:7]))}:{CYAN}{var.value:^7.02f}{RESET}"
                     if type(var.value) == float
-                    else f"{YELLOW}{((var.name))}:{CYAN}{var.value:^4d}{RESET}"
+                    else f"{YELLOW}{((var.name[0]+var.name[4:7]))}:{CYAN}{var.value:^4d}{RESET}"
                 )
                 for var in self.state.RECV_ORDER
             ]

@@ -34,13 +34,23 @@ typedef struct {
   //
   uint8_t cmd;
   //data
-  uint8_t test;
+  int32_t step1_speed;
+  int32_t step1_angle;
+  int32_t step1_target_angle;
+  uint8_t step1_rotating;
+  uint8_t step1_dir;
+
+  int32_t step2_speed;
+  int32_t step2_angle;
+  int32_t step2_target_angle;
+  uint8_t step2_rotating;
+  uint8_t step2_dir;
   //
   uint8_t check_sum;
 } __attribute__((__packed__)) _to_user_st;
 
 typedef union {
-  uint8_t byte_data[6];
+  uint8_t byte_data[33];
   _to_user_st st_data;
 } _to_user_un;
 

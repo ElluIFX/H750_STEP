@@ -55,6 +55,8 @@
 /* USER CODE BEGIN PV */
 uart_o_ctrl_t uart_1;
 step_ctrl_t step_1;
+step_ctrl_t step_2;
+step_ctrl_t step_3;
 uint8_t user_com_data;
 /* USER CODE END PV */
 
