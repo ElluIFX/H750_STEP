@@ -28,7 +28,7 @@ class FC_Protocol(FC_Base_Uart_Comunication):
 
     ######### 飞控命令 #########
 
-    def _send_command(self, option: int, data: bytes = b"", need_ack=False) -> None:
+    def _send_command(self, option: int, data: bytes = b"", need_ack=True) -> None:
         sended = self.send_data_to_fc(data, option, need_ack=need_ack)
         # logger.debug(f"[FC] Send: {bytes_to_str(sended)}")
 
@@ -42,9 +42,7 @@ class FC_Protocol(FC_Base_Uart_Comunication):
         self._byte_temp3.reset(b, "u8", int)
         self._send_command(
             0x01,
-            self._byte_temp1.bytes
-            + self._byte_temp2.bytes
-            + self._byte_temp3.bytes
-            + b"\x11",  # 帧结尾
+            self._byte_temp1.bytes + self._byte_temp2.bytes + self._byte_temp3.bytes,
+            True,
         )
         self._action_log("set rgb led", f"#{r:02X}{g:02X}{b:02X}")

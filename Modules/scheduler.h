@@ -17,6 +17,7 @@
 #define USER_COM_TASK_ID 0
 #define UART_OVERTIME_TASK_ID 1
 #define KEY_CHECK_ALL_LOOP_1MS_TASK_ID 2
+#define KEY_FUNC_TASK_ID 3
 
 #define SCH_TASK_COUNT sizeof(schTaskList) / sizeof(scheduler_task_t)
 // typedef
@@ -30,6 +31,7 @@ typedef struct {       //用户任务结构
 // private variables
 // private functions
 void Task_Uart_Overtime(void);
+void Task_Key_Func(void);
 
 void Scheduler_Init(void);
 void Scheduler_Run(void);

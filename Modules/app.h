@@ -44,12 +44,6 @@ typedef union {
   _to_user_st st_data;
 } _to_user_un;
 
-// ACK数据结构
-typedef struct {
-  uint8_t ack_data;
-  uint8_t WTS;
-} __attribute__((__packed__)) _user_ack_st;
-
 void UserCom_GetOneByte(uint8_t data);
 
 void UserCom_Task();

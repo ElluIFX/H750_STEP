@@ -40,7 +40,7 @@ class log:
         self.logger.fileHdl = logging.FileHandler(logFile, encoding="utf-8")
         self.logger.consoleHdl = logging.StreamHandler()
         self.logger.fileHdl.setLevel(logging.DEBUG)
-        self.logger.consoleHdl.setLevel(logging.INFO)
+        self.logger.consoleHdl.setLevel(logging.DEBUG)
         self.logger.fileHdl.setFormatter(fmtFile)
         self.logger.consoleHdl.setFormatter(fmtConsole)
         self.logger.addHandler(self.logger.fileHdl)
@@ -60,11 +60,6 @@ class log:
 
     def critical(self, msg, *args, **kwargs):
         self.logger.critical(msg, *args, **kwargs)
-
-    def set_level(self, level):
-        levelList = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        if level in levelList:
-            self.logger.setLevel(level)
 
 
 logger = log()

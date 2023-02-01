@@ -24,16 +24,28 @@
 int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
   static char sendBuff[_UART_BUFFER_SIZE];  // 发送缓冲区
   static int sendLen = 0;                   // 发送计数
-  // 检查串口是否打开
-  if (huart->gState != HAL_UART_STATE_READY) {
-    return -1;
-  }
+  static uint32_t waitTick = 0;             // 等待时间
+  static uint8_t isError = 0;               // 是否出错
+
+  // if (huart->gState != HAL_UART_STATE_READY) {
+  //   return -1;
+  // }
+#if _UART_PRINT_SAFE
+  if (isError) return -1;
+#endif
   va_list ap;         // typedef char *va_list
   va_start(ap, fmt);  // 找到第一个可变形参的地址赋给ap
   sendLen = vsprintf(sendBuff, fmt, ap);
   va_end(ap);
   if (sendLen > 0) {
-    while (huart->gState != HAL_UART_STATE_READY) {
+    if (huart->gState != HAL_UART_STATE_READY) {  // 检查串口是否打开
+      waitTick = HAL_GetTick();
+      while (huart->gState != HAL_UART_STATE_READY) {
+        if (HAL_GetTick() - waitTick > _UART_SEND_TIMEOUT) {
+          isError = 1;
+          return -1;
+        }
+      }
     }
     HAL_UART_Transmit_IT(huart, (uint8_t *)sendBuff, sendLen);
   }

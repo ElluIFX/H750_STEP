@@ -30,6 +30,8 @@
 #define _UART_BUFFER_SIZE 256
 #define _RX_DEFAILT_TIMEOUT 10
 #define _RX_DEFAILT_ENDBIT '\n'
+#define _UART_SEND_TIMEOUT 500  // 串口发送超时时间
+#define _UART_PRINT_SAFE 0      // 超时后永久关闭Printf避免主程序卡死
 
 // typedef
 typedef struct {                         // 超时型UART控制结构体

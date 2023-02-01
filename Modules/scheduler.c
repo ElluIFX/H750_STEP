@@ -22,12 +22,11 @@ static scheduler_task_t schTaskList[] = {
     {UserCom_Task, 100, 0, 0, 1},
     {Task_Uart_Overtime, 100, 0, 0, 1},
     {key_check_all_loop_1ms, 1000, 0, 0, 1},
+    {Task_Key_Func, 10, 0, 0, 1},
 #if _ENABLE_SCH_DEBUG
     {Show_Sch_Debug_info, 0.2, 0, 0, 1},
 #endif
 };
-
-__weak void Task_Uart_Overtime(void) { return; }
 // @note !redefined in main.c
 
 /************************ scheduler tasks end ************************/

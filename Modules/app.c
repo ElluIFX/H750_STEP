@@ -10,19 +10,22 @@
 
 #include "app.h"
 
+#include "queue.h"
 #include "uart_pack.h"
 #include "usart.h"
 
 void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len);
 void UserCom_DataExchange(void);
 void UserCom_SendData(uint8_t* dataToSend, uint8_t Length);
-void UserCom_SendAck(uint8_t ack_data);
-void UserCom_CalcAck(uint8_t option, uint8_t* data_p, uint8_t data_len);
+void UserCom_CheckAck();
+void UserCom_SendAck(uint8_t option, uint8_t* data_p, uint8_t data_len);
 
 static uint8_t user_connected = 0;       // 用户下位机是否连接
 static uint16_t user_heartbeat_cnt = 0;  // 用户下位机心跳计数
 _to_user_un to_user_data;                // 回传状态数据
-_user_ack_st user_ack;                   // ACK数据
+static uint8_t user_ack_buf[32];         // ACK数据
+static queue_t user_ack_queue;           // ACK队列
+static uint16_t user_ack_cnt = 0;        // ACK计数
 
 /**
  * @brief 用户协议数据获取,在串口中断中调用,解析完成后调用UserCom_DataAnl
@@ -103,14 +106,13 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
         user_heartbeat_cnt = 0;
         break;
       }
-    case 0x01:                  // WS2812控制
-      if (p_data[3] == 0x11) {  // 帧结尾，确保接收完整
-        uint32_t_temp = 0xff000000;
-        uint32_t_temp |= p_data[0] << 16;
-        uint32_t_temp |= p_data[1] << 8;
-        uint32_t_temp |= p_data[2];
-        LOG_D("WS2812 color:#%08x", uint32_t_temp);
-      }
+    case 0x01:  // WS2812控制
+      uint32_t_temp = 0xff000000;
+      uint32_t_temp |= p_data[0] << 16;
+      uint32_t_temp |= p_data[1] << 8;
+      uint32_t_temp |= p_data[2];
+      LOG_D("WS2812 color:#%08x", uint32_t_temp);
+      UserCom_SendAck(option, p_data, 3);
       break;
     case 0x02:
       break;
@@ -128,12 +130,14 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
   }
 }
 
-void UserCom_CalcAck(uint8_t option, uint8_t* data_p, uint8_t data_len) {
-  user_ack.ack_data = option;
+void UserCom_SendAck(uint8_t option, uint8_t* data_p, uint8_t data_len) {
+  static uint8_t ack_data;
+  ack_data = option;
   for (uint8_t i = 0; i < data_len; i++) {
-    user_ack.ack_data += data_p[i];
+    ack_data += data_p[i];
   }
-  user_ack.WTS = 1;
+  ENQUEUE(&user_ack_queue, ack_data);
+  user_ack_cnt++;
 }
 
 /**
@@ -143,6 +147,13 @@ void UserCom_CalcAck(uint8_t option, uint8_t* data_p, uint8_t data_len) {
 void UserCom_Task() {
   const float dT_s = 0.01f;
   static uint16_t data_exchange_cnt = 0;
+  static uint8_t ack_queue_inited = 0;
+
+  if (!ack_queue_inited) {
+    ack_queue_inited = 1;
+    QUEUE_INIT(&user_ack_queue, user_ack_buf, 32);
+  }
+
   if (user_connected) {
     // 心跳超时检查
     user_heartbeat_cnt++;
@@ -152,11 +163,7 @@ void UserCom_Task() {
     }
 
     // ACK发送检查
-    if (user_ack.WTS == 1) {
-      user_ack.WTS = 0;
-      UserCom_SendAck(user_ack.ack_data);
-      user_ack.ack_data = 0;
-    }
+    UserCom_CheckAck();
 
     // 数据交换
     data_exchange_cnt++;
@@ -171,6 +178,8 @@ void UserCom_Task() {
  * @brief 交换实时数据
  */
 void UserCom_DataExchange(void) {
+  static uint8_t test_data = 0;
+  test_data++;
   static uint8_t user_data_size = sizeof(to_user_data.byte_data);
 
   // 初始化数据
@@ -180,7 +189,7 @@ void UserCom_DataExchange(void) {
   to_user_data.st_data.cmd = 0x01;
 
   // 数据赋值
-  to_user_data.st_data.test = 233;
+  to_user_data.st_data.test = test_data;
 
   // 校验和
   to_user_data.st_data.check_sum = 0;
@@ -193,17 +202,24 @@ void UserCom_DataExchange(void) {
 
 static uint8_t data_to_send[12];
 
-void UserCom_SendAck(uint8_t ack_data) {
-  data_to_send[0] = 0xAA;      // head1
-  data_to_send[1] = 0x55;      // head2
-  data_to_send[2] = 0x02;      // length
-  data_to_send[3] = 0x02;      // cmd
-  data_to_send[4] = ack_data;  // data
-  data_to_send[5] = 0;         // check_sum
-  for (uint8_t i = 0; i < 5; i++) {
-    data_to_send[5] += data_to_send[i];
+/**
+ * @brief 检查ACK队列并发送
+ */
+void UserCom_CheckAck() {
+  while (user_ack_cnt) {
+    data_to_send[0] = 0xAA;  // head1
+    data_to_send[1] = 0x55;  // head2
+    data_to_send[2] = 0x02;  // length
+    data_to_send[3] = 0x02;  // cmd
+    // data_to_send[4] = ack_data;  // data
+    DEQUEUE(&user_ack_queue, (data_to_send + 4), 1);
+    data_to_send[5] = 0;  // check_sum
+    for (uint8_t i = 0; i < 5; i++) {
+      data_to_send[5] += data_to_send[i];
+    }
+    UserCom_SendData(data_to_send, 6);
+    user_ack_cnt--;
   }
-  UserCom_SendData(data_to_send, 6);
 }
 
 /**

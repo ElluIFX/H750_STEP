@@ -1,5 +1,6 @@
-from FlightController import FC_Server
+from FlightController import FC_Server, logger
 
+logger.setLevel("DEBUG")
 fc = FC_Server()
 try:
     fc.start_listen_serial("COM3")

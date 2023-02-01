@@ -53,7 +53,7 @@ class Byte_Var:
         self._var_type = py_var_type
         self._multiplier = value_multiplier
         self._value = self._var_type(init_value)
-        self._last_update_time = time.time()
+        self._last_update_time = time.perf_counter()
         self.name = name
         return self
 
@@ -64,7 +64,7 @@ class Byte_Var:
     @value.setter
     def value(self, value):
         self._value = self._var_type(value)
-        self._last_update_time = time.time()
+        self._last_update_time = time.perf_counter()
 
     def update_value_with_mul(self, value):
         self._value = self._var_type(value * self._multiplier)
@@ -85,7 +85,7 @@ class Byte_Var:
         self._value = self._var_type(
             int.from_bytes(value, "little", signed=self._signed) * self._multiplier
         )
-        self._last_update_time = time.time()
+        self._last_update_time = time.perf_counter()
 
     @property
     def byte_length(self):
@@ -162,10 +162,10 @@ class FC_Event:
             while self._status == False:
                 time.sleep(0.1)
         else:
-            start_time = time.time()
+            start_time = time.perf_counter()
             while self._status == False:
                 time.sleep(0.1)
-                if time.time() - start_time > timeout:
+                if time.perf_counter() - start_time > timeout:
                     logger.warning("[FC] Wait for event timeout")
                     break
         self._check_callback()
@@ -190,7 +190,6 @@ class FC_Event:
         """
         self._callback = callback
         self._callback_trigger = trigger
-        return self
 
     def is_set(self) -> bool:
         return self._status
@@ -230,8 +229,7 @@ class FC_Base_Uart_Comunication(object):
         self._print_state_flag = False
         self._ser_32 = None
         self._send_lock = threading.Lock()
-        self._waiting_ack = False
-        self._recivied_ack = None
+        self._recivied_ack_dict = {}
         self._event_update_callback = None  # 仅供FC_Remote使用
         self.state = FC_State_Struct()
         self.event = FC_Event_Struct()
@@ -294,16 +292,15 @@ class FC_Base_Uart_Comunication(object):
         if need_ack:
             if _ack_retry_count is None:
                 _ack_retry_count = self.settings.ack_max_retry
+            check_ack = option
+            for add_bit in data:
+                check_ack = (check_ack + add_bit) & 0xFF
+            self._recivied_ack_dict[check_ack] = None
             if _ack_retry_count < 0:
                 # raise Exception("Wait ACK reached max retry")
                 logger.error("Wait ACK reached max retry")
                 return None
-            self._waiting_ack = True
-            self._recivied_ack = None
-            send_time = time.time()
-            check_ack = option
-            for add_bit in data:
-                check_ack = (check_ack + add_bit) & 0xFF
+            send_time = time.perf_counter()
         try:
             self._send_lock.acquire(timeout=self.settings.wait_sending_timeout)
         except:
@@ -313,43 +310,47 @@ class FC_Base_Uart_Comunication(object):
         sended = self._ser_32.write(data)
         self._send_lock.release()
         if need_ack:
-            while self._waiting_ack:
-                if time.time() - send_time > self.settings.wait_ack_timeout:
+            while self._recivied_ack_dict[check_ack] is None:
+                if time.perf_counter() - send_time > self.settings.wait_ack_timeout:
                     logger.warning("[FC] ACK timeout, retrying")
                     return self.send_data_to_fc(
                         data, option, need_ack, _ack_retry_count - 1
                     )
                 time.sleep(0.001)
-            if self._recivied_ack is None or self._recivied_ack != check_ack:
-                logger.warning("[FC] ACK not received or invalid, retrying")
-                return self.send_data_to_fc(
-                    data, option, need_ack, _ack_retry_count - 1
-                )
+            self._recivied_ack_dict.pop(check_ack)
         return sended
 
     def _listen_serial_task(self):
         logger.info("[FC] listen serial thread started")
-        last_heartbeat_time = time.time()
+        last_heartbeat_time = time.perf_counter()
+        last_receive_time = time.perf_counter()
         while self.running:
             try:
                 if self._ser_32.read():
+                    last_receive_time = time.perf_counter()
                     _data = self._ser_32.rx_data
                     cmd = _data[0]
                     data = _data[1:]
                     if cmd == 0x01:  # 状态回传
                         self._update_state(data)
-                        # logger.info(f"[FC] State: {self.state}")
                     elif cmd == 0x02:  # ACK返回
-                        self._recivied_ack = data[0]
-                        self._waiting_ack = False
+                        self._recivied_ack_dict[data[0]] = time.perf_counter()
                     elif cmd == 0x03:  # 事件通讯
                         self._update_event(data)
+                if time.perf_counter() - last_heartbeat_time > 0.25:  # 心跳包
+                    self.send_data_to_fc(b"\x01", 0x00)
+                    last_heartbeat_time = time.perf_counter()
+                if time.perf_counter() - last_receive_time > 0.5:  # 断连检测
+                    if self.connected:
+                        self.connected = False
+                        logger.warning("[FC] Disconnected")
+                for ack, recv_time in self._recivied_ack_dict.items():
+                    if recv_time is not None and time.perf_counter() - recv_time > 0.5:
+                        self._recivied_ack_dict.pop(ack)
+                        logger.warning("[FC] Removed an unrecognized ACK")
+                time.sleep(0.001)  # 降低CPU占用
             except Exception as e:
                 logger.error(f"[FC] listen serial exception: {traceback.format_exc()}")
-            if time.time() - last_heartbeat_time > 0.25:
-                self.send_data_to_fc(b"\x01", 0x00)  # 心跳包
-                last_heartbeat_time = time.time()
-            time.sleep(0.001)  # 降低CPU占用
 
     def _update_state(self, recv_byte):
         try:
@@ -378,8 +379,10 @@ class FC_Base_Uart_Comunication(object):
             event_operator = recv_byte[1]
             if event_operator == 0x01:  # set
                 self.event.EVENT_CODE[event_code].set()
+                logger.debug(f"[FC] Event {event_code} set")
             elif event_operator == 0x02:  # clear
                 self.event.EVENT_CODE[event_code].clear()
+                logger.debug(f"[FC] Event {event_code} clear")
             if callable(self._event_update_callback):
                 self._event_update_callback(event_code, event_operator)
         except Exception as e:

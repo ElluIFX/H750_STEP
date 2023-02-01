@@ -39,7 +39,7 @@ def get_logger():
     logger.fileHdl = logging.FileHandler(logFile, encoding="utf-8")
     logger.consoleHdl = logging.StreamHandler()
     logger.fileHdl.setLevel(logging.DEBUG)
-    logger.consoleHdl.setLevel(logging.INFO)
+    logger.consoleHdl.setLevel(logging.DEBUG)
     logger.fileHdl.setFormatter(fmtFile)
     logger.consoleHdl.setFormatter(fmtConsole)
     logger.addHandler(logger.fileHdl)
