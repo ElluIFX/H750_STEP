@@ -28,24 +28,14 @@ class FC_Application(FC_Protocol):
         self._action_log("wait ok", "fc connection")
         return True
 
-    def wait_for_step_idle(self, motor: int, timeout_s=5) -> bool:
+    def wait_for_step_idle(self, motor: int, timeout_s=30) -> bool:
         """
         等待电机停止转动
         """
         t0 = time.time()
         time.sleep(0.1)  # 等待数据回传
 
-        def idle(motor):
-            ret = True
-            if motor & self.STEP1:
-                ret = not self.state.step1_rotating.value and ret
-            if motor & self.STEP2:
-                ret = not self.state.step2_rotating.value and ret
-            if motor & self.STEP3:
-                ret = not self.state.step3_rotating.value and ret
-            return ret
-
-        while not idle(motor):
+        while not self.step_idle(motor):
             time.sleep(0.1)
             if timeout_s > 0 and time.time() - t0 > timeout_s:
                 logger.warning(f"[FC] wait for step {motor} idle timeout")

@@ -70,7 +70,7 @@ void Scheduler_Run(void) {
         _sch_debug_task_consuming[i] = _sch_debug_task_tick;
       }
 #else
-      schTaskList[i].task();
+       schTaskList[i].task();
 #endif  // _ENABLE_SCH_DEBUG
     }
   }

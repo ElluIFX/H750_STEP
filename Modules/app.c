@@ -87,7 +87,8 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
   static uint32_t* p_uint32_t;
   static uint8_t uint8_t_temp;
   static uint32_t uint32_t_temp;
-  static double double_temp;
+  __IO static int32_t int32_t_temp;
+  __IO static double double_temp;
 
   p_data = (uint8_t*)(data_buf + 4);
   option = data_buf[2];
@@ -113,8 +114,8 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       }
     case 0x01:  // 步进电机速度设置
       uint8_t_temp = p_data[0];
-      p_int32_t = (int32_t*)(p_data + 1);
-      double_temp = (double)(*p_int32_t) / 100.0;
+      int32_t_temp = *((int32_t*)(p_data + 1));
+      double_temp = (double)(int32_t_temp) / 100.0;
       LOG_D("[COM] set step speed: 0x%02x, %f", uint8_t_temp, double_temp);
       if (uint8_t_temp & 0x01) Step_Set_Speed(&step_1, double_temp);
       if (uint8_t_temp & 0x02) Step_Set_Speed(&step_2, double_temp);
@@ -123,8 +124,8 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       break;
     case 0x02:  // 步进电机角度设置
       uint8_t_temp = p_data[0];
-      p_int32_t = (int32_t*)(p_data + 1);
-      double_temp = (double)(*p_int32_t) / 100.0;
+      int32_t_temp = *((int32_t*)(p_data + 1));
+      double_temp = (double)(int32_t_temp) / 100.0;
       LOG_D("[COM] set step angle: 0x%02x, %f", uint8_t_temp, double_temp);
       if (uint8_t_temp & 0x01) Step_Set_Angle(&step_1, double_temp);
       if (uint8_t_temp & 0x02) Step_Set_Angle(&step_2, double_temp);
@@ -133,8 +134,8 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       break;
     case 0x03:  // 步进电机相对旋转
       uint8_t_temp = p_data[0];
-      p_int32_t = (int32_t*)(p_data + 1);
-      double_temp = (double)(*p_int32_t) / 1000.0;
+      int32_t_temp = *((int32_t*)(p_data + 1));
+      double_temp = (double)(int32_t_temp) / 100.0;
       LOG_D("[COM] rotate: 0x%02x, %f", uint8_t_temp, double_temp);
       if (uint8_t_temp & 0x01) Step_Rotate(&step_1, double_temp);
       if (uint8_t_temp & 0x02) Step_Rotate(&step_2, double_temp);
@@ -143,8 +144,8 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       break;
     case 0x04:  // 步进电机绝对旋转
       uint8_t_temp = p_data[0];
-      p_int32_t = (int32_t*)(p_data + 1);
-      double_temp = (double)(*p_int32_t) / 1000.0;
+      int32_t_temp = *((int32_t*)(p_data + 1));
+      double_temp = (double)(int32_t_temp) / 100.0;
       LOG_D("[COM] rotate abs 0x%02x, %f", uint8_t_temp, double_temp);
       if (uint8_t_temp & 0x01) Step_Rotate_Abs(&step_1, double_temp);
       if (uint8_t_temp & 0x02) Step_Rotate_Abs(&step_2, double_temp);
