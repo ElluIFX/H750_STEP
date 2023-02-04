@@ -131,7 +131,7 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       if (uint8_t_temp & 0x04) Step_Set_Angle(&step_3, double_temp);
       UserCom_SendAck(option, p_data, 5);
       break;
-    case 0x03: // 步进电机相对旋转
+    case 0x03:  // 步进电机相对旋转
       uint8_t_temp = p_data[0];
       p_int32_t = (int32_t*)(p_data + 1);
       double_temp = (double)(*p_int32_t) / 1000.0;
@@ -141,7 +141,7 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       if (uint8_t_temp & 0x04) Step_Rotate(&step_3, double_temp);
       UserCom_SendAck(option, p_data, 5);
       break;
-    case 0x04: // 步进电机绝对旋转
+    case 0x04:  // 步进电机绝对旋转
       uint8_t_temp = p_data[0];
       p_int32_t = (int32_t*)(p_data + 1);
       double_temp = (double)(*p_int32_t) / 1000.0;
@@ -163,7 +163,7 @@ void UserCom_SendAck(uint8_t option, uint8_t* data_p, uint8_t data_len) {
   for (uint8_t i = 0; i < data_len; i++) {
     ack_data += data_p[i];
   }
-  ENQUEUE(&user_ack_queue, ack_data);
+  ENQUEUE(&user_ack_queue, &ack_data, 1, uint8_t);
   user_ack_cnt++;
 }
 
