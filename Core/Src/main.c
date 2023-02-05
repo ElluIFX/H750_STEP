@@ -185,9 +185,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
     Uart_O_Data_Process(&uart_1);
   } else if (huart->Instance == USART3) {
-    static uint32_t cnt = 0;
-    cnt++;
-    RGB(0xff, 0xff, cnt % 10 < 5);
     UserCom_GetOneByte(user_com_data);
     HAL_UART_Receive_IT(&USER_COM_UART, &user_com_data, 1);
   }

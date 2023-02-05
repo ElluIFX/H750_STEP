@@ -80,6 +80,7 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
   static uint8_t suboption;
   static uint8_t recv_check;
   static uint8_t calc_check;
+  static uint8_t led_cnt = 0;
   static uint8_t len;
   static uint8_t* p_data;
   static int16_t* p_int16_t;
@@ -102,11 +103,13 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
     LOG_E("[COM] checksum ERR");
     return;
   }
+  RGB(0xff, 0xff, led_cnt++ % 2 == 0);
   switch (option) {
     case 0x00:  // 心跳包
       if (p_data[0] == 0x01) {
         if (!user_connected) {
           user_connected = 1;
+          RGB(0xff, 1, 0xff);
           LOG_I("[COM] connected");
         }
         user_heartbeat_cnt = 0;
@@ -152,6 +155,14 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
       if (uint8_t_temp & 0x04) Step_Rotate_Abs(&step_3, double_temp);
       UserCom_SendAck(option, p_data, 5);
       break;
+    case 0x05:  // 步进电机停止
+      uint8_t_temp = p_data[0];
+      LOG_D("[COM] stop 0x%02x", uint8_t_temp);
+      if (uint8_t_temp & 0x01) Step_Stop(&step_1);
+      if (uint8_t_temp & 0x02) Step_Stop(&step_2);
+      if (uint8_t_temp & 0x04) Step_Stop(&step_3);
+      UserCom_SendAck(option, p_data, 1);
+      break;
     default:
       LOG_E("[COM] unknown option: 0x%02x", option);
       break;
@@ -187,6 +198,7 @@ void UserCom_Task() {
     user_heartbeat_cnt++;
     if (user_heartbeat_cnt * dT_s >= USER_HEARTBEAT_TIMEOUT_S) {
       user_connected = 0;
+      RGB(0xff, 0, 0);
       LOG_W("[COM] disconnected");
     }
 

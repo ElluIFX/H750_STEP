@@ -98,3 +98,12 @@ class FC_Protocol(FC_Base_Uart_Comunication):
         self._byte_temp2.reset(deg, "s32", float, 0.001)
         self._send_command(0x04, self._byte_temp1.bytes + self._byte_temp2.bytes)
         self._action_log("rotate abs", f"Step {motor} rotate to: {deg}")
+
+    def step_stop(self, motor: int):
+        """
+        停止电机
+        motor: 电机掩码(eg: STEP1 | STEP2)
+        """
+        self._byte_temp1.reset(motor, "u8", int)
+        self._send_command(0x05, self._byte_temp1.bytes)
+        self._action_log("stop", f"Step {motor}")

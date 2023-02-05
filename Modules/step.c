@@ -168,7 +168,7 @@ void Step_Stop(step_ctrl_t *step) {
   step->angle = Step_Get_Angle(step);
   __HAL_TIM_SET_COUNTER(step->timSlave, 0);
   step->rotating = 0;
-  LOG_I("[STEP] manully stop");
+  LOG_D("[STEP] Manual stop");
 }
 
 /**
