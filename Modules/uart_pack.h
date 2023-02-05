@@ -10,6 +10,7 @@
 
 #ifndef _UART_PACK_H_
 #define _UART_PACK_H_
+#include "candy.h"
 #include "main.h"
 #include "stdio.h"
 #include "usart.h"
@@ -19,6 +20,7 @@
 #define _ENABLE_LOG 1            // 是否输出调试信息
 #define _ENABLE_LOG_TIMESTAMP 0  // 调试信息是否添加时间戳
 #define _ENABLE_LOG_COLOR 1      // 调试信息是否按等级添加颜色
+#define _ENABLE_LOG_ASSERT 1     // 是否开启ASSERT
 // 调试信息等级
 #define _ENABLE_LOG_DEBUG 1  // 是否输出DEBUG信息
 #define _ENABLE_LOG_INFO 1   // 是否输出INFO信息
@@ -26,33 +28,36 @@
 #define _ENABLE_LOG_ERROR 1  // 是否输出ERROR信息
 
 #define printf(...) printft(&_DEBUG_UART_PORT, __VA_ARGS__)
+#define printf_flush() printft_flush(&_DEBUG_UART_PORT)
 // constants
-#define _UART_BUFFER_SIZE 256
+#define _UART_RECV_BUFFER_SIZE 256  // 串口接收缓冲区大小
+#define _UART_SEND_BUFFER_SIZE 256  // 串口发送缓冲区大小
 #define _RX_DEFAILT_TIMEOUT 10
 #define _RX_DEFAILT_ENDBIT '\n'
 #define _UART_SEND_TIMEOUT 1000  // 串口发送超时时间
-#define _UART_PRINT_SAFE 0      // 超时后永久关闭Printf避免主程序卡死
+#define _UART_PRINT_SAFE 1  // 超时后永久关闭Printf避免主程序卡死
+#define _UART_PRINT_PINGPONG 1  // 是否使用双缓冲区
 
 // typedef
-typedef struct {                         // 超时型UART控制结构体
-  uint8_t rxBuf[_UART_BUFFER_SIZE];      // 接收缓冲区
-  uint8_t rxSaveBuf[_UART_BUFFER_SIZE];  // 接收保存缓冲区
-  __IO uint8_t rxBufIndex;               // 接收缓冲区索引
-  __IO uint8_t rxSaveFlag;               // 接收完成标志位
-  __IO uint8_t rxSaveCounter;            // 接收保存区计数器
-  __IO uint32_t rxTick;                  // 接收超时计时器
-  uint32_t rxTimeout;                    // 接收超时时间
-  UART_HandleTypeDef *huart;             // 串口句柄
+typedef struct {                              // 超时型UART控制结构体
+  uint8_t rxBuf[_UART_RECV_BUFFER_SIZE];      // 接收缓冲区
+  uint8_t rxSaveBuf[_UART_RECV_BUFFER_SIZE];  // 接收保存缓冲区
+  __IO uint8_t rxBufIndex;                    // 接收缓冲区索引
+  __IO uint8_t rxSaveFlag;                    // 接收完成标志位
+  __IO uint8_t rxSaveCounter;                 // 接收保存区计数器
+  __IO uint32_t rxTick;                       // 接收超时计时器
+  uint32_t rxTimeout;                         // 接收超时时间
+  UART_HandleTypeDef *huart;                  // 串口句柄
 } uart_o_ctrl_t;
 
-typedef struct {                         // 单结束位型UART控制结构体
-  uint8_t rxBuf[_UART_BUFFER_SIZE];      // 接收缓冲区
-  uint8_t rxSaveBuf[_UART_BUFFER_SIZE];  // 接收保存缓冲区
-  __IO uint8_t rxSaveFlag;               // 接收完成标志位
-  __IO uint8_t rxBufIndex;               // 接收缓冲区索引
-  __IO uint8_t rxSaveCounter;            // 接收保存区计数器
-  uint8_t rxEndBit;                      // 接收结束位
-  UART_HandleTypeDef *huart;             // 串口句柄
+typedef struct {                          // 单结束位型UART控制结构体
+  uint8_t rxBuf[_UART_RECV_BUFFER_SIZE];  // 接收缓冲区
+  uint8_t rxSaveBuf[_UART_RECV_BUFFER_SIZE];  // 接收保存缓冲区
+  __IO uint8_t rxSaveFlag;                    // 接收完成标志位
+  __IO uint8_t rxBufIndex;                    // 接收缓冲区索引
+  __IO uint8_t rxSaveCounter;                 // 接收保存区计数器
+  uint8_t rxEndBit;                           // 接收结束位
+  UART_HandleTypeDef *huart;                  // 串口句柄
 } uart_e_ctrl_t;
 
 // defines
@@ -60,7 +65,6 @@ typedef struct {                         // 单结束位型UART控制结构体
 #define RX_DATA(uart_t) ((char *)uart_t.rxSaveBuf)
 #define RX_COUNT(uart_t) uart_t.rxSaveCounter
 #define RX_CLEAR(uart_t) (uart_t.rxSaveFlag = 0)
-
 // debug functions
 #define _GET_SYS_TICK HAL_GetTick
 #define _LOG_PRINTF printf
@@ -109,10 +113,36 @@ typedef struct {                         // 单结束位型UART控制结构体
 #ifndef LOG_RAW
 #define LOG_RAW(...) ((void)0)
 #endif
+#if _ENABLE_LOG_ASSERT
+#define __ASSERT_0(expr)                                      \
+  if (!(expr)) {                                              \
+    _DBG_LOG("A", 31, "Failed at %s:%d", __FILE__, __LINE__); \
+    Assert_Failed_Handler(__FILE__, __LINE__);                \
+  }
+#define __ASSERT_1(expr, text)                 \
+  if (!(expr)) {                               \
+    _DBG_LOG("A", 31, text);                   \
+    Assert_Failed_Handler(__FILE__, __LINE__); \
+  }
+#define __ASSERT_2(expr, text, cmd) \
+  if (!(expr)) {                    \
+    _DBG_LOG("A", 31, text);        \
+    cmd;                            \
+  }
+
+// 断言, param: 表达式, 错误信息(可选), 自定义语句(可选)
+// 断言失败时默认调用Assert_Failed_Handler
+#define ASSERT(expr, ...) EVAL(__ASSERT_, __VA_ARGS__)(expr, ##__VA_ARGS__)
+#else
+#define ASSERT(expr, ...) ((void)0)
+#endif
 
 // public functions
 
+void Assert_Failed_Handler(char *file, uint32_t line);
+
 int printft(UART_HandleTypeDef *huart, char *fmt, ...);
+void printft_flush(UART_HandleTypeDef *huart);
 void Enable_Uart_O_Control(UART_HandleTypeDef *huart, uart_o_ctrl_t *ctrl);
 void Enable_Uart_E_Control(UART_HandleTypeDef *huart, uart_e_ctrl_t *ctrl);
 uint8_t Uart_O_Data_Process(uart_o_ctrl_t *ctrl);

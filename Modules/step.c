@@ -48,10 +48,7 @@ void Step_Init(step_ctrl_t *step, TIM_HandleTypeDef *timMaster,
  * @param  speed            速度(单位:度/秒)
  */
 void Step_Set_Speed(step_ctrl_t *step, double speed) {
-  if (speed < 0.01 && speed > -0.01) {
-    LOG_E("[STEP] setspeed=0");
-    return;
-  }
+  ASSERT(speed < -0.01 || speed > 0.01, "[STEP] setspeed=0", return);
   speed = fabs(speed);
   double pulsePerSec = speed / 360 * STEP_PULSE_PER_ROUND;  // 等价于pwm频率
   if (pulsePerSec > STEP_PWM_MAX_FREQ) {
@@ -112,10 +109,7 @@ void Step_IT_Handler(step_ctrl_t *step, TIM_HandleTypeDef *htim) {
  * @param  angle            旋转角度(单位:度)(正数:顺时针, 负数:逆时针)
  */
 void Step_Rotate(step_ctrl_t *step, double angle) {
-  if (step->rotating) {
-    LOG_E("[STEP] step busy");
-    return;
-  }
+  ASSERT(!step->rotating, "[STEP] In busy", return);
   step->dir = angle > 0 ? 1 : 0;
   if (!step->dirLogic)
     HAL_GPIO_WritePin(step->dirPort, step->dirPin,
@@ -125,10 +119,7 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
                       step->dir ? GPIO_PIN_SET : GPIO_PIN_RESET);
   angle = fabs(angle);
   uint32_t targetPulse = angle * STEP_PULSE_PER_ROUND / 360;
-  if (targetPulse < 2) {
-    LOG_E("[STEP] targetPulse<2");
-    return;
-  }
+  ASSERT(targetPulse > 1, "[STEP] targetPulse<2", return);
   // step->angleTarget = step->angle + angle; // 存在累加误差
   step->angleTarget = (double)targetPulse * 360 / STEP_PULSE_PER_ROUND;
   step->angleTarget = step->dir ? step->angle + step->angleTarget
