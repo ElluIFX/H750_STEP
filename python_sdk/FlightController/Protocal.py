@@ -71,7 +71,7 @@ class FC_Protocol(FC_Base_Uart_Comunication):
         """
         self._check_idle(motor)
         self._byte_temp1.reset(motor, "u8", int)
-        self._byte_temp2.reset(angle, "s32", float, 0.01)
+        self._byte_temp2.reset(angle, "s32", float, 0.001)
         self._send_command(0x02, self._byte_temp1.bytes + self._byte_temp2.bytes)
         self._action_log("set angle", f"Step {motor} angle: {angle}")
 
