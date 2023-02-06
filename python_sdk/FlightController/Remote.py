@@ -142,6 +142,13 @@ class FC_Client(FC_Application):
     飞控客户端, 与服务器通信
     """
 
+    class FC_Manager(BaseManager):
+        pass
+
+    FC_Manager.register("get_proxy")
+    FC_Manager.register("get_proxy_state_list")
+    FC_Manager.register("get_proxy_state_event")
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._manager = None
@@ -201,26 +208,31 @@ class FC_Client(FC_Application):
                 if self._print_state_flag:
                     self._print_state()
             except Exception as e:
+                logger.exception(e)
                 if not self.running:
                     break
                 logger.error(f"[FC_Client] State sync error: {e}")
-                if "WinError" in str(e) or "Broken pipe" in str(e):
+                if (
+                    "WinError" in str(e)
+                    or "Broken pipe" in str(e)
+                    or "Connection reset" in str(e)
+                ):
                     logger.warning("[FC_Client] Connection lost, trying to reconnect")
-                    self.running = False
-                    for i in range(3):
-                        logger.warning(f"[FC_Client] Trying to reconnect {i+1}/3")
+                    for i in range(5):
+                        logger.warning(f"[FC_Client] Trying to reconnect {i+1}/5")
                         try:
-                            self._manager = None  # 先析构
+                            del self._manager
                             self.connect(*self._last_connection_args)
                         except:
-                            logger.warning(f"[FC_Client] Reconnect failed {i+1}/3")
-                            time.sleep(1)
+                            logger.warning(f"[FC_Client] Reconnect failed {i+1}/5")
+                            time.sleep(2)
                         else:
                             logger.info("[FC_Client] Successfully reconnected")
-                            time.sleep(0.1)
+                            time.sleep(1)
                             break
                     else:
                         logger.error("[FC_Client] All reconnect failed, closing")
+                        self.running = False
         logger.warning("[FC_Client] State sync thread stopped")
 
     def connect(self, host="127.0.0.1", port=5654, authkey=b"fc"):
@@ -228,14 +240,8 @@ class FC_Client(FC_Application):
         连接服务器
         """
 
-        class FC_Manager(BaseManager):
-            pass
-
         self._last_connection_args = (host, port, authkey)
-        FC_Manager.register("get_proxy")
-        FC_Manager.register("get_proxy_state_list")
-        FC_Manager.register("get_proxy_state_event")
-        self._manager = FC_Manager(address=(host, port), authkey=authkey)
+        self._manager = self.FC_Manager(address=(host, port), authkey=authkey)
         self._manager.connect()
         logger.info("[FC_Client] Manager connected to %s:%d" % (host, port))
         self._func_proxy = self._manager.get_proxy()
@@ -252,7 +258,21 @@ class FC_Client(FC_Application):
         _ack_retry_count: int = None,
     ):
         if not self._func_proxy:
-            raise Exception("FC_Client not connected")
-        return self._func_proxy.send_data_to_fc(
-            data, option, need_ack, _ack_retry_count
-        )
+            raise Exception("[FC_Client] not connected")
+        try:
+            return self._func_proxy.send_data_to_fc(
+                data, option, need_ack, _ack_retry_count
+            )
+        except Exception as e:
+            if not self.running:
+                raise Exception("[FC_Client] closed")
+            logger.error(
+                f"[FC_Client] send_data_to_fc error: {e}, waiting for reconnect"
+            )
+            while self.running:
+                time.sleep(0.1)
+            if not self.running:
+                raise Exception("[FC_Client] closed")
+            return self._func_proxy.send_data_to_fc(
+                data, option, need_ack, _ack_retry_count
+            )
