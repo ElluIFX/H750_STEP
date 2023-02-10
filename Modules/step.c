@@ -53,6 +53,7 @@ void Step_Set_Speed(step_ctrl_t *step, double speed) {
   double pulsePerSec = speed / 360 * STEP_PULSE_PER_ROUND;  // 等价于pwm频率
   if (pulsePerSec > STEP_PWM_MAX_FREQ) {
     pulsePerSec = STEP_PWM_MAX_FREQ;
+    speed = pulsePerSec / STEP_PULSE_PER_ROUND * 360;
   }
   uint32_t prescaler = STEP_TIM_BASE_CLK / pulsePerSec / 2;
   uint16_t period = 2;
