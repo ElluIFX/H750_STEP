@@ -63,7 +63,7 @@ uint8_t user_com_data;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void Add_Tasks(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -109,7 +109,7 @@ int main(void) {
   HAL_UART_Receive_IT(&USER_COM_UART, &user_com_data, 1);
   Step_Init(&step_1, &htim1, &htim2, TIM_CHANNEL_1, STEP_DIR_GPIO_Port,
             STEP_DIR_Pin, 0);
-  Scheduler_Init();  // initialize scheduler
+  Add_Tasks();
   RGB(0, 0, 0);
   LOG_I("--- System Boot ---");
   /* USER CODE END 2 */
@@ -208,6 +208,13 @@ void Task_Key_Func(void) {
 // TIM interrupt
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   Step_IT_Handler(&step_1, htim);
+}
+
+void Add_Tasks(void) {
+  Add_SchTask(UserCom_Task, 100, 1);
+  Add_SchTask(Task_Uart_Overtime, 100, 1);
+  Add_SchTask(Task_Key_Func, 10, 1);
+  Add_SchTask(key_check_all_loop_1ms, 1000, 1);
 }
 
 /* USER CODE END 4 */

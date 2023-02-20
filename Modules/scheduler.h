@@ -10,36 +10,36 @@
 #ifndef _SCHEDULER_H_
 #define _SCHEDULER_H_
 
+#include "candy.h"
 #include "main.h"
 //  defines
 #define _ENABLE_SCH_DEBUG 0
+#define _SCH_DEBUG_INFO_PERIOD 5000  // ms
 
-#define USER_COM_TASK_ID 0
-#define UART_OVERTIME_TASK_ID 1
-#define KEY_CHECK_ALL_LOOP_1MS_TASK_ID 2
-#define KEY_FUNC_TASK_ID 3
-
-#define SCH_TASK_COUNT sizeof(schTaskList) / sizeof(scheduler_task_t)
 // typedef
-typedef struct {       //用户任务结构
+typedef struct {       // 用户任务结构
   void (*task)(void);  // task function
   float rateHz;        // task rate
   uint16_t periodMs;   // task period
   uint32_t lastRunMs;  // last run time
   uint8_t enable;      // enable or disable
+  uint8_t taskId;      // task id
+#if _ENABLE_SCH_DEBUG
+  uint32_t task_consuming;  // task consuming time
+#endif
+  void *next;  // next task
 } scheduler_task_t;
 // private variables
-// private functions
-void Task_Uart_Overtime(void);
-void Task_Key_Func(void);
 
-void Scheduler_Init(void);
+// private functions
+
+uint8_t Add_SchTask(void (*task)(void), float rateHz, uint8_t enable);
 void Scheduler_Run(void);
-void Enable_SchTask(uint8_t taskId);
-void Disable_SchTask(uint8_t taskId);
+void Enable_SchTask_Id(uint8_t taskId);
+void Disable_SchTask_Id(uint8_t taskId);
+void Enable_SchTask_Func(void (*task)(void));
+void Disable_SchTask_Func(void (*task)(void));
+void Del_SchTask_Id(uint8_t taskId);
+void Del_SchTask_Func(void (*task)(void));
 void Set_SchTask_Freq(uint8_t taskId, float freq);
-#if _ENABLE_SCH_DEBUG
-void Show_Sch_Debug_info(void);
-#warning You Enabled a Scheduler Debugging Feature, which will cause lower performance.
-#endif  // _ENABLE_SCH_DEBUG
 #endif  // _SCHEDULER_H_

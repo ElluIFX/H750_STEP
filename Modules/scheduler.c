@@ -12,87 +12,211 @@
 
 #include <key.h>
 #include <scheduler.h>
-#include <uart_pack.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <uart_pack.h>
+
 #include "app.h"
 /************************ scheduler tasks ************************/
 
 // task lists
-static scheduler_task_t schTaskList[] = {
-    {UserCom_Task, 100, 0, 0, 1},
-    {Task_Uart_Overtime, 100, 0, 0, 1},
-    {key_check_all_loop_1ms, 1000, 0, 0, 1},
-    {Task_Key_Func, 10, 0, 0, 1},
-#if _ENABLE_SCH_DEBUG
-    {Show_Sch_Debug_info, 0.2, 0, 0, 1},
-#endif
-};
+scheduler_task_t *schTaskEntry = NULL;
 // @note !redefined in main.c
 
 /************************ scheduler tasks end ************************/
 
 // variables
-#if _ENABLE_SCH_DEBUG
-uint32_t _sch_debug_task_consuming[SCH_TASK_COUNT - 1];
-__IO uint32_t _sch_debug_task_tick = 0;
-#endif  // _ENABLE_SCH_DEBUG
 
 // scheduler task control functions
 
 /**
- * @brief Initialize tasklist
- * @retval None
- **/
-void Scheduler_Init(void) {
-  for (uint8_t i = 0; i < SCH_TASK_COUNT; i++) {
-    schTaskList[i].periodMs = 1000 / schTaskList[i].rateHz;
-    if (schTaskList[i].periodMs == 0) {
-      schTaskList[i].periodMs = 1;
+ * @brief add a task to scheduler
+ * @param  task             task function
+ * @param  rateHz           task rate
+ * @param  enable           enable or disable at startup
+ * @retval uint8_t taskId
+ */
+uint8_t Add_SchTask(void (*task)(void), float rateHz, uint8_t enable) {
+  scheduler_task_t *p = (scheduler_task_t *)malloc(sizeof(scheduler_task_t));
+  p->task = task;
+  p->rateHz = rateHz;
+  p->periodMs = 1000 / p->rateHz;
+  if (p->periodMs == 0) p->periodMs = 1;
+  p->lastRunMs = 0;
+  p->enable = enable;
+  p->taskId = 0;
+  p->next = NULL;
+  if (schTaskEntry == NULL) {
+    schTaskEntry = p;
+  } else {
+    scheduler_task_t *q = schTaskEntry;
+    while (q->next != NULL) {
+      q = q->next;
     }
+    q->next = p;
+    p->taskId = q->taskId + 1;
   }
+  return p->taskId;
 }
+
+#if _ENABLE_SCH_DEBUG
+
+void Show_Sch_Debug_info(void) {
+  static char str_buf[100];
+  scheduler_task_t *p = schTaskEntry;
+  sprintf(str_buf, "SCH INFO ---\r\n");
+  while (p != NULL) {
+    sprintf(str_buf, "%sTask %d: %dms\r\n", str_buf, p->taskId,
+            p->task_consuming);
+    p = p->next;
+  }
+  LOG_D("%s--- INFO END ---", str_buf);
+}
+
+#endif  // _ENABLE_SCH_DEBUG
 
 /**
  * @brief scheduler runner, call in main loop
  * @retval None
  **/
 void Scheduler_Run(void) {
-  for (uint8_t i = 0; i < SCH_TASK_COUNT; i++) {
-    uint32_t currentTime = HAL_GetTick();
-    if (schTaskList[i].enable &&
-        (currentTime - schTaskList[i].lastRunMs >= schTaskList[i].periodMs)) {
-      schTaskList[i].lastRunMs = currentTime;
-#if _ENABLE_SCH_DEBUG
-      _sch_debug_task_tick = HAL_GetTick();
-      schTaskList[i].task();
-      _sch_debug_task_tick = HAL_GetTick() - _sch_debug_task_tick;
-      if (_sch_debug_task_consuming[i] < _sch_debug_task_tick) {
-        _sch_debug_task_consuming[i] = _sch_debug_task_tick;
-      }
-#else
-       schTaskList[i].task();
-#endif  // _ENABLE_SCH_DEBUG
-    }
+  if (schTaskEntry == NULL) {
+    return;
   }
+  static scheduler_task_t *p = NULL;
+  if (p == NULL) {
+    p = schTaskEntry;
+  }
+#if _ENABLE_SCH_DEBUG
+  static uint32_t _sch_debug_task_tick = 0;
+  static uint32_t _last_show_debug_info_tick = 0;
+  if (HAL_GetTick() - _last_show_debug_info_tick >= _SCH_DEBUG_INFO_PERIOD) {
+    _last_show_debug_info_tick = HAL_GetTick();
+    Show_Sch_Debug_info();
+  }
+#endif  // _ENABLE_SCH_DEBUG
+  uint32_t currentTime = HAL_GetTick();
+  if (p->enable && (currentTime - p->lastRunMs >= p->periodMs)) {
+    p->lastRunMs = currentTime;
+#if _ENABLE_SCH_DEBUG
+    _sch_debug_task_tick = HAL_GetTick();
+    p->task();
+    _sch_debug_task_tick = HAL_GetTick() - _sch_debug_task_tick;
+    if (p->task_consuming < _sch_debug_task_tick) {
+      p->task_consuming = _sch_debug_task_tick;
+    }
+#else
+    p->task();
+#endif  // _ENABLE_SCH_DEBUG
+  }
+  p = p->next;
 }
 
 /**
- * @brief Enable a task
+ * @brief Enable a task by id
  * @param  taskId           Target task id
  */
-void Enable_SchTask(uint8_t taskId) {
-  if (taskId < SCH_TASK_COUNT) {
-    schTaskList[taskId].enable = 1;
+void Enable_SchTask_Id(uint8_t taskId) {
+  scheduler_task_t *p = schTaskEntry;
+  while (p != NULL) {
+    if (p->taskId == taskId) {
+      p->enable = 1;
+      break;
+    }
+    p = p->next;
   }
 }
 
 /**
- * @brief Disable a task
+ * @brief Disable a task by id
  * @param  taskId            Target task id
  */
-void Disable_SchTask(uint8_t taskId) {
-  if (taskId < SCH_TASK_COUNT) {
-    schTaskList[taskId].enable = 0;
+void Disable_SchTask_Id(uint8_t taskId) {
+  scheduler_task_t *p = schTaskEntry;
+  while (p != NULL) {
+    if (p->taskId == taskId) {
+      p->enable = 0;
+      break;
+    }
+    p = p->next;
+  }
+}
+
+/**
+ * @brief Enable a task by function
+ * @param  task             Target task function
+ * @note if multiple tasks have the same function, all of them will be enabled
+ */
+void Enable_SchTask_Func(void (*task)(void)) {
+  scheduler_task_t *p = schTaskEntry;
+  while (p != NULL) {
+    if (p->task == task) {
+      p->enable = 1;
+    }
+    p = p->next;
+  }
+}
+
+/**
+ * @brief Disable a task by function
+ * @param  task             Target task function
+ * @note if multiple tasks have the same function, all of them will be
+ * disabled
+ */
+void Disable_SchTask_Func(void (*task)(void)) {
+  scheduler_task_t *p = schTaskEntry;
+  while (p != NULL) {
+    if (p->task == task) {
+      p->enable = 0;
+    }
+    p = p->next;
+  }
+}
+
+
+/**
+ * @brief delete a task from scheduler by task id
+ * @param  taskId           task id
+ * @retval None
+ */
+void Del_SchTask_Id(uint8_t taskId) {
+  scheduler_task_t *p = schTaskEntry;
+  scheduler_task_t *q = NULL;
+  while (p != NULL) {
+    if (p->taskId == taskId) {
+      if (q == NULL) {
+        schTaskEntry = p->next;
+      } else {
+        q->next = p->next;
+      }
+      free(p);
+      break;
+    }
+    q = p;
+    p = p->next;
+  }
+}
+
+/**
+ * @brief delete a task from scheduler by task function
+ * @param  task             task function
+ * @retval None
+ */
+void Del_SchTask_Func(void (*task)(void)) {
+  scheduler_task_t *p = schTaskEntry;
+  scheduler_task_t *q = NULL;
+  while (p != NULL) {
+    if (p->task == task) {
+      if (q == NULL) {
+        schTaskEntry = p->next;
+      } else {
+        q->next = p->next;
+      }
+      free(p);
+      break;
+    }
+    q = p;
+    p = p->next;
   }
 }
 
@@ -102,30 +226,22 @@ void Disable_SchTask(uint8_t taskId) {
  * @param  freq             Freq
  */
 void Set_SchTask_Freq(uint8_t taskId, float freq) {
-  if (taskId < SCH_TASK_COUNT) {
-    schTaskList[taskId].rateHz = freq;
-    schTaskList[taskId].periodMs = 1000 / schTaskList[taskId].rateHz;
-    if (schTaskList[taskId].periodMs == 0) {
-      schTaskList[taskId].periodMs = 1;
+  scheduler_task_t *p = schTaskEntry;
+  while (p != NULL) {
+    if (p->taskId == taskId) {
+      p->rateHz = freq;
+      p->periodMs = 1000 / p->rateHz;
+      if (p->periodMs == 0) {
+        p->periodMs = 1;
+      }
+      break;
     }
+    p = p->next;
   }
 }
 
 // debug functions
 
 #if _ENABLE_SCH_DEBUG
-
-void Show_Sch_Debug_info(void) {
-  static char str_buf[100];
-  for (uint8_t i = 0; i < SCH_TASK_COUNT - 1; i++) {
-    if (i == 0) {
-      sprintf(str_buf, "SCHEDULER INFO:\r\n");
-    }
-    sprintf(str_buf, "%sTask %d: %ldms\r\n", str_buf, i,
-            _sch_debug_task_consuming[i]);
-    _sch_debug_task_consuming[i] = 0;
-  }
-  LOG_D("%s------ INFO END ------", str_buf);
-}
-
+#warning You Enabled a Scheduler Debugging Feature, which will cause lower performance.
 #endif  // _ENABLE_SCH_DEBUG
