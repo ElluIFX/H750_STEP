@@ -15,6 +15,21 @@
 #include "stdarg.h"
 #include "string.h"
 
+#if _UART_PRINT_PINGPONG
+char sendBuff1[_UART_SEND_BUFFER_SIZE];  // 发送缓冲区1
+char sendBuff2[_UART_SEND_BUFFER_SIZE];  // 发送缓冲区2
+#else
+char sendBuff[_UART_SEND_BUFFER_SIZE];  // 发送缓冲区
+#endif
+
+#if _UART_PRINT_DMA
+#define _UART_NOT_READY                     \
+  (huart->gState != HAL_UART_STATE_READY || \
+   huart->hdmatx->State != HAL_DMA_STATE_READY)
+#else
+#define _UART_NOT_READY huart->gState != HAL_UART_STATE_READY
+#endif
+
 /**
  * @brief Send a format string to target UART port
  * @param  huart            UART handle
@@ -28,10 +43,8 @@ int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
 #endif
 
 #if _UART_PRINT_PINGPONG
-  static char sendBuff1[_UART_SEND_BUFFER_SIZE];  // 发送缓冲区1
-  static char sendBuff2[_UART_SEND_BUFFER_SIZE];  // 发送缓冲区2
-  static uint8_t bufSelect = 0;                   // 缓冲区选择
-  char *sendBuffP = NULL;                         // 发送缓冲区指针
+  static uint8_t bufSelect = 0;  // 缓冲区选择
+  char *sendBuffP = NULL;        // 发送缓冲区指针
   if (bufSelect == 0) {
     bufSelect = 1;
     sendBuffP = sendBuff1;
@@ -40,11 +53,10 @@ int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
     sendBuffP = sendBuff2;
   }
 #else
-  static char sendBuff[_UART_SEND_BUFFER_SIZE];  // 发送缓冲区
-  char *sendBuffP = sendBuff;                    // 发送缓冲区指针
-  if (huart->gState != HAL_UART_STATE_READY) {   // 检查串口是否打开
-    uint32_t waitTick = HAL_GetTick();           // 等待时间
-    while (huart->gState != HAL_UART_STATE_READY) {
+  char *sendBuffP = sendBuff;           // 发送缓冲区指针
+  if (_UART_NOT_READY) {                // 检查串口是否打开
+    uint32_t waitTick = HAL_GetTick();  // 等待时间
+    while (_UART_NOT_READY) {
       if (HAL_GetTick() - waitTick > _UART_SEND_TIMEOUT) {
         isError = 1;
         return -1;
@@ -58,9 +70,9 @@ int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
   va_end(ap);
   if (sendLen > 0) {
 #if _UART_PRINT_PINGPONG
-    if (huart->gState != HAL_UART_STATE_READY) {  // 检查串口是否打开
-      uint32_t waitTick = HAL_GetTick();          // 等待时间
-      while (huart->gState != HAL_UART_STATE_READY) {
+    if (_UART_NOT_READY) {                // 检查串口是否打开
+      uint32_t waitTick = HAL_GetTick();  // 等待时间
+      while (_UART_NOT_READY) {
         if (HAL_GetTick() - waitTick > _UART_SEND_TIMEOUT) {
           isError = 1;
           return -1;
@@ -68,7 +80,11 @@ int printft(UART_HandleTypeDef *huart, char *fmt, ...) {
       }
     }
 #endif
+#if _UART_PRINT_DMA
+    HAL_UART_Transmit_DMA(huart, (uint8_t *)sendBuffP, sendLen);
+#else
     HAL_UART_Transmit_IT(huart, (uint8_t *)sendBuffP, sendLen);
+#endif
   }
   return sendLen;
 }
@@ -83,10 +99,10 @@ void printft_flush(UART_HandleTypeDef *huart) {
 
 /**
  * @brief Enable a Overtime UART controller, call once before using UART
- * @param  huart            target UART handle
  * @param  ctrl             target UART controller
+ * @param  huart            target UART handle
  */
-void Enable_Uart_O_Control(UART_HandleTypeDef *huart, uart_o_ctrl_t *ctrl) {
+void Enable_Uart_O_Control(uart_o_ctrl_t *ctrl, UART_HandleTypeDef *huart) {
   // 设置串口接收中断
   HAL_UART_Receive_IT(huart, ctrl->rxBuf, 1);
   if (ctrl->rxTimeout == 0) {
@@ -101,10 +117,10 @@ void Enable_Uart_O_Control(UART_HandleTypeDef *huart, uart_o_ctrl_t *ctrl) {
 /**
  * @brief Enable a Single Ending Bit UART controller, call once before using
  * UART
- * @param  huart            target UART handle
  * @param  ctrl             target UART controller
+ * @param  huart            target UART handle
  */
-void Enable_Uart_E_Control(UART_HandleTypeDef *huart, uart_e_ctrl_t *ctrl) {
+void Enable_Uart_E_Control(uart_e_ctrl_t *ctrl, UART_HandleTypeDef *huart) {
   // 设置串口接收中断
   HAL_UART_Receive_IT(huart, ctrl->rxBuf, 1);
   if (ctrl->rxEndBit == 0) {
@@ -118,11 +134,12 @@ void Enable_Uart_E_Control(UART_HandleTypeDef *huart, uart_e_ctrl_t *ctrl) {
 
 /**
  * @brief Process Overtime UART data, call in HAL_UART_RxCpltCallback
- * @param  huart            target UART handle
  * @param  ctrl             target UART controller
+ * @param  huart            target UART handle
  * @retval 1: data overflow, 0: no data overflow
  */
-uint8_t Uart_O_Data_Process(uart_o_ctrl_t *ctrl) {
+uint8_t Uart_O_Data_Process(uart_o_ctrl_t *ctrl, UART_HandleTypeDef *huart) {
+  if (huart->Instance != ctrl->huart->Instance) return 0;
   ctrl->rxTick = HAL_GetTick();
   if (++ctrl->rxBufIndex >= _UART_RECV_BUFFER_SIZE - 1) {
     memcpy(ctrl->rxSaveBuf, ctrl->rxBuf, ctrl->rxBufIndex);
@@ -138,7 +155,6 @@ uint8_t Uart_O_Data_Process(uart_o_ctrl_t *ctrl) {
 
 /**
  * @brief Overtime UART timeout check, call in scheduler
- * @param  huart            target UART handle
  * @param  ctrl             target UART controller
  * @retval 1: timeout, 0: not timeout
  */
@@ -158,11 +174,12 @@ uint8_t Uart_O_Timeout_Check(uart_o_ctrl_t *ctrl) {
 
 /**
  * @brief Process Single Ending Bit UART data, call in HAL_UART_RxCpltCallback
- * @param  huart            target UART handle
  * @param  ctrl             target UART controller
+ * @param  huart            target UART handle
  * @retval 1: end bit, 0: not end bit
  */
-uint8_t Uart_E_Data_Process(uart_e_ctrl_t *ctrl) {
+uint8_t Uart_E_Data_Process(uart_e_ctrl_t *ctrl, UART_HandleTypeDef *huart) {
+  if (huart->Instance != ctrl->huart->Instance) return 0;
   ctrl->rxBufIndex++;
   if (ctrl->rxBufIndex >= _UART_RECV_BUFFER_SIZE - 1 ||
       ctrl->rxBuf[ctrl->rxBufIndex - 1] == ctrl->rxEndBit) {
@@ -177,6 +194,36 @@ uint8_t Uart_E_Data_Process(uart_e_ctrl_t *ctrl) {
   }
   HAL_UART_Receive_IT(ctrl->huart, ctrl->rxBuf + ctrl->rxBufIndex, 1);
   return 0;
+}
+
+/**
+ * @brief Enable a DMA UART controller, call once before using UART
+ * @param  ctrl             target UART controller
+ * @param  huart            target UART handle
+ */
+void Enable_Uart_DMA_Control(uart_dma_ctrl_t *ctrl, UART_HandleTypeDef *huart) {
+  ctrl->huart = huart;
+  ctrl->rxSaveFlag = 0;
+  ctrl->rxSaveCounter = 0;
+  ctrl->rxSaveBuf[0] = 0;
+  HAL_UARTEx_ReceiveToIdle_DMA(huart, ctrl->rxBuf, _UART_RECV_BUFFER_SIZE - 1);
+}
+
+/**
+ * @brief Process DMA UART data, call in HAL_UARTEx_RxEventCallback
+ * @param  ctrl             target UART controller
+ * @param  huart            target UART handle
+ * @param  Size             DMA transfer size
+ */
+uint8_t Uart_DMA_Data_Process(uart_dma_ctrl_t *ctrl, UART_HandleTypeDef *huart,
+                              uint16_t Size) {
+  if (huart->Instance != ctrl->huart->Instance) return 0;
+  memcpy(ctrl->rxSaveBuf, ctrl->rxBuf, Size);
+  ctrl->rxSaveCounter = Size;
+  ctrl->rxSaveFlag = 1;
+  HAL_UARTEx_ReceiveToIdle_DMA(ctrl->huart, ctrl->rxBuf,
+                               _UART_RECV_BUFFER_SIZE - 1);
+  return 1;
 }
 
 __weak void Assert_Failed_Handler(char *file, uint32_t line) {}

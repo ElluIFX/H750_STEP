@@ -37,6 +37,7 @@
 #define _UART_SEND_TIMEOUT 1000  // 串口发送超时时间
 #define _UART_PRINT_SAFE 1  // 超时后永久关闭Printf避免主程序卡死
 #define _UART_PRINT_PINGPONG 1  // 是否使用双缓冲区
+#define _UART_PRINT_DMA 1       // 是否使用DMA发送
 
 // typedef
 typedef struct {                              // 超时型UART控制结构体
@@ -60,11 +61,20 @@ typedef struct {                          // 单结束位型UART控制结构体
   UART_HandleTypeDef *huart;                  // 串口句柄
 } uart_e_ctrl_t;
 
+typedef struct {                              // DMA型UART控制结构体
+  uint8_t rxBuf[_UART_RECV_BUFFER_SIZE];      // 接收缓冲区
+  uint8_t rxSaveBuf[_UART_RECV_BUFFER_SIZE];  // 接收保存缓冲区
+  __IO uint8_t rxSaveFlag;                    // 接收完成标志位
+  __IO uint8_t rxSaveCounter;                 // 接收保存区计数器
+  UART_HandleTypeDef *huart;                  // 串口句柄
+} uart_dma_ctrl_t;
+
 // defines
 #define RX_DONE(uart_t) uart_t.rxSaveFlag
 #define RX_DATA(uart_t) ((char *)uart_t.rxSaveBuf)
 #define RX_COUNT(uart_t) uart_t.rxSaveCounter
 #define RX_CLEAR(uart_t) (uart_t.rxSaveFlag = 0)
+
 // debug functions
 #define _GET_SYS_TICK HAL_GetTick
 #define _LOG_PRINTF printf
@@ -143,9 +153,12 @@ void Assert_Failed_Handler(char *file, uint32_t line);
 
 int printft(UART_HandleTypeDef *huart, char *fmt, ...);
 void printft_flush(UART_HandleTypeDef *huart);
-void Enable_Uart_O_Control(UART_HandleTypeDef *huart, uart_o_ctrl_t *ctrl);
-void Enable_Uart_E_Control(UART_HandleTypeDef *huart, uart_e_ctrl_t *ctrl);
-uint8_t Uart_O_Data_Process(uart_o_ctrl_t *ctrl);
+void Enable_Uart_O_Control(uart_o_ctrl_t *ctrl, UART_HandleTypeDef *huart);
+void Enable_Uart_E_Control(uart_e_ctrl_t *ctrl, UART_HandleTypeDef *huart);
+uint8_t Uart_O_Data_Process(uart_o_ctrl_t *ctrl, UART_HandleTypeDef *huart);
 uint8_t Uart_O_Timeout_Check(uart_o_ctrl_t *ctrl);
-uint8_t Uart_E_Data_Process(uart_e_ctrl_t *ctrl);
+uint8_t Uart_E_Data_Process(uart_e_ctrl_t *ctrl, UART_HandleTypeDef *huart);
+void Enable_Uart_DMA_Control(uart_dma_ctrl_t *ctrl, UART_HandleTypeDef *huart);
+uint8_t Uart_DMA_Data_Process(uart_dma_ctrl_t *ctrl, UART_HandleTypeDef *huart,
+                              uint16_t Size);
 #endif
