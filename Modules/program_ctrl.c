@@ -10,7 +10,6 @@
 
 #include "program_ctrl.h"
 #include "stdio.h"
-#include "candy.h"
 // variables
 user_task_ctrl_t user_task_ctrl_word;
 static uint32_t taskRunTime = 0;

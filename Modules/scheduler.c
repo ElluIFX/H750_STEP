@@ -10,17 +10,13 @@
  * THINK DIFFERENTLY
  */
 
-#include <key.h>
 #include <scheduler.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <uart_pack.h>
-
-#include "app.h"
 /************************ scheduler tasks ************************/
 
 // task lists
-scheduler_task_t *schTaskEntry = NULL;
+static scheduler_task_t *schTaskEntry = NULL;
+static scheduler_task_t *task_p = NULL;
 // @note !redefined in main.c
 
 /************************ scheduler tasks end ************************/
@@ -60,8 +56,10 @@ uint8_t Add_SchTask(void (*task)(void), float rateHz, uint8_t enable) {
 }
 
 #if _ENABLE_SCH_DEBUG
+#include <stdio.h>
+#include <uart_pack.h>
 
-void Show_Sch_Debug_info(void) {
+void Print_Debug_info(void) {
   static char str_buf[100];
   scheduler_task_t *p = schTaskEntry;
   sprintf(str_buf, "SCH INFO ---\r\n");
@@ -80,43 +78,46 @@ void Show_Sch_Debug_info(void) {
  * @retval None
  **/
 void Scheduler_Run(void) {
-  if (schTaskEntry == NULL) {
-    return;
-  }
-  static scheduler_task_t *p = NULL;
-  if (p == NULL) {
-    p = schTaskEntry;
-  }
+  static uint32_t currentTime = 0;
 #if _ENABLE_SCH_DEBUG
   static uint32_t _sch_debug_task_tick = 0;
   static uint32_t _last_show_debug_info_tick = 0;
-  if (HAL_GetTick() - _last_show_debug_info_tick >= _SCH_DEBUG_INFO_PERIOD) {
-    _last_show_debug_info_tick = HAL_GetTick();
-    Show_Sch_Debug_info();
-  }
 #endif  // _ENABLE_SCH_DEBUG
-  uint32_t currentTime = HAL_GetTick();
-  if (p->enable && (currentTime - p->lastRunMs >= p->periodMs)) {
-    p->lastRunMs = currentTime;
+
+  while (1) {
+    if (schTaskEntry == NULL) continue;
+    if (task_p == NULL) task_p = schTaskEntry;
+    currentTime = HAL_GetTick();
+    if (task_p->enable &&
+        (currentTime - task_p->lastRunMs >= task_p->periodMs)) {
+      task_p->lastRunMs = currentTime;
 #if _ENABLE_SCH_DEBUG
-    _sch_debug_task_tick = HAL_GetTick();
-    p->task();
-    _sch_debug_task_tick = HAL_GetTick() - _sch_debug_task_tick;
-    if (p->task_consuming < _sch_debug_task_tick) {
-      p->task_consuming = _sch_debug_task_tick;
-    }
+      _sch_debug_task_tick = HAL_GetTick();
+      task_p->task();
+      _sch_debug_task_tick = HAL_GetTick() - _sch_debug_task_tick;
+      if (task_p->task_consuming < _sch_debug_task_tick) {
+        task_p->task_consuming = _sch_debug_task_tick;
+      }
 #else
-    p->task();
+      task_p->task();
+#endif  // _ENABLE_SCH_DEBUG
+    }
+    if (task_p != NULL) task_p = task_p->next;
+#if _ENABLE_SCH_DEBUG
+    currentTime = HAL_GetTick();
+    if (currentTime - _last_show_debug_info_tick >= _SCH_DEBUG_INFO_PERIOD) {
+      _last_show_debug_info_tick = currentTime;
+      Print_Debug_info();
+    }
 #endif  // _ENABLE_SCH_DEBUG
   }
-  p = p->next;
 }
 
 /**
  * @brief Enable a task by id
  * @param  taskId           Target task id
  */
-void Enable_SchTask_Id(uint8_t taskId) {
+void _Enable_SchTask_Id(uint8_t taskId) {
   scheduler_task_t *p = schTaskEntry;
   while (p != NULL) {
     if (p->taskId == taskId) {
@@ -131,7 +132,7 @@ void Enable_SchTask_Id(uint8_t taskId) {
  * @brief Disable a task by id
  * @param  taskId            Target task id
  */
-void Disable_SchTask_Id(uint8_t taskId) {
+void _Disable_SchTask_Id(uint8_t taskId) {
   scheduler_task_t *p = schTaskEntry;
   while (p != NULL) {
     if (p->taskId == taskId) {
@@ -147,7 +148,7 @@ void Disable_SchTask_Id(uint8_t taskId) {
  * @param  task             Target task function
  * @note if multiple tasks have the same function, all of them will be enabled
  */
-void Enable_SchTask_Func(void (*task)(void)) {
+void _Enable_SchTask_Func(void (*task)(void)) {
   scheduler_task_t *p = schTaskEntry;
   while (p != NULL) {
     if (p->task == task) {
@@ -163,7 +164,7 @@ void Enable_SchTask_Func(void (*task)(void)) {
  * @note if multiple tasks have the same function, all of them will be
  * disabled
  */
-void Disable_SchTask_Func(void (*task)(void)) {
+void _Disable_SchTask_Func(void (*task)(void)) {
   scheduler_task_t *p = schTaskEntry;
   while (p != NULL) {
     if (p->task == task) {
@@ -173,13 +174,12 @@ void Disable_SchTask_Func(void (*task)(void)) {
   }
 }
 
-
 /**
  * @brief delete a task from scheduler by task id
  * @param  taskId           task id
  * @retval None
  */
-void Del_SchTask_Id(uint8_t taskId) {
+void _Del_SchTask_Id(uint8_t taskId) {
   scheduler_task_t *p = schTaskEntry;
   scheduler_task_t *q = NULL;
   while (p != NULL) {
@@ -189,6 +189,7 @@ void Del_SchTask_Id(uint8_t taskId) {
       } else {
         q->next = p->next;
       }
+      if (task_p == p) task_p = p->next;
       free(p);
       break;
     }
@@ -202,9 +203,10 @@ void Del_SchTask_Id(uint8_t taskId) {
  * @param  task             task function
  * @retval None
  */
-void Del_SchTask_Func(void (*task)(void)) {
+void _Del_SchTask_Func(void (*task)(void)) {
   scheduler_task_t *p = schTaskEntry;
   scheduler_task_t *q = NULL;
+  scheduler_task_t *k = NULL;
   while (p != NULL) {
     if (p->task == task) {
       if (q == NULL) {
@@ -212,8 +214,11 @@ void Del_SchTask_Func(void (*task)(void)) {
       } else {
         q->next = p->next;
       }
+      if (task_p == p) task_p = p->next;
+      k = p->next;
       free(p);
-      break;
+      p = k;
+      continue;
     }
     q = p;
     p = p->next;
@@ -225,7 +230,7 @@ void Del_SchTask_Func(void (*task)(void)) {
  * @param  taskId           Task ID
  * @param  freq             Freq
  */
-void Set_SchTask_Freq(uint8_t taskId, float freq) {
+void _Set_SchTask_Freq_Id(uint8_t taskId, float freq) {
   scheduler_task_t *p = schTaskEntry;
   while (p != NULL) {
     if (p->taskId == taskId) {
@@ -240,6 +245,24 @@ void Set_SchTask_Freq(uint8_t taskId, float freq) {
   }
 }
 
+/**
+ * @brief Set a task's rate
+ * @param  task             Task function
+ * @param  freq             Freq
+ */
+void _Set_SchTask_Freq_Func(void (*task)(void), float freq) {
+  scheduler_task_t *p = schTaskEntry;
+  while (p != NULL) {
+    if (p->task == task) {
+      p->rateHz = freq;
+      p->periodMs = 1000 / p->rateHz;
+      if (p->periodMs == 0) {
+        p->periodMs = 1;
+      }
+    }
+    p = p->next;
+  }
+}
 // debug functions
 
 #if _ENABLE_SCH_DEBUG
