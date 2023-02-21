@@ -220,6 +220,7 @@ uint8_t Uart_DMA_Data_Process(uart_dma_ctrl_t *ctrl, UART_HandleTypeDef *huart,
   if (huart->Instance != ctrl->huart->Instance) return 0;
   memcpy(ctrl->rxSaveBuf, ctrl->rxBuf, Size);
   ctrl->rxSaveCounter = Size;
+  ctrl->rxSaveBuf[Size] = 0;
   ctrl->rxSaveFlag = 1;
   HAL_UARTEx_ReceiveToIdle_DMA(ctrl->huart, ctrl->rxBuf,
                                _UART_RECV_BUFFER_SIZE - 1);
