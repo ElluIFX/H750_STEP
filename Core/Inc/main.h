@@ -68,6 +68,7 @@ void Error_Handler(void);
 #define KEY_GPIO_Port GPIOA
 #define STEP_DIR_Pin GPIO_PIN_8
 #define STEP_DIR_GPIO_Port GPIOE
+
 /* USER CODE BEGIN Private defines */
 #define _MSC_VER
 /* USER CODE END Private defines */
@@ -77,5 +78,3 @@ void Error_Handler(void);
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
