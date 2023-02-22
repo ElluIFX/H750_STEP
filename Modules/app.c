@@ -30,42 +30,42 @@ _to_user_un to_user_data;                // 回传状态数据
 static uint8_t user_ack_buf[32];         // ACK数据
 static queue_t user_ack_queue;           // ACK队列
 static uint16_t user_ack_cnt = 0;        // ACK计数
+uint8_t user_data_temp[128];             // 数据接受缓存
 
 /**
  * @brief 用户协议数据获取,在串口中断中调用,解析完成后调用UserCom_DataAnl
  * @param  data             数据
  */
 void UserCom_GetOneByte(uint8_t data) {
-  static uint8_t _user_data_temp[128];
   static uint8_t _user_data_cnt = 0;
   static uint8_t _data_len = 0;
   static uint8_t state = 0;
   if (state == 0 && data == 0xAA) {
     state = 1;
-    _user_data_temp[0] = data;
+    user_data_temp[0] = data;
   } else if (state == 1 && data == 0x22) {
     state = 2;
-    _user_data_temp[1] = data;
+    user_data_temp[1] = data;
   } else if (state == 2)  // 功能字
   {
     state = 3;
-    _user_data_temp[2] = data;
+    user_data_temp[2] = data;
   } else if (state == 3)  // 长度
   {
     state = 4;
-    _user_data_temp[3] = data;
+    user_data_temp[3] = data;
     _data_len = data;  // 数据长度
     _user_data_cnt = 0;
     // if (_data_len == 1) state = 5;
   } else if (state == 4 && _data_len > 0) {
     _data_len--;
-    _user_data_temp[4 + _user_data_cnt++] = data;  // 数据
+    user_data_temp[4 + _user_data_cnt++] = data;  // 数据
     if (_data_len == 0) state = 5;
   } else if (state == 5) {
     state = 0;
-    _user_data_temp[4 + _user_data_cnt] = data;  // check sum
-    _user_data_temp[5 + _user_data_cnt] = 0;
-    UserCom_DataAnl(_user_data_temp, 4 + _user_data_cnt);
+    user_data_temp[4 + _user_data_cnt] = data;  // check sum
+    user_data_temp[5 + _user_data_cnt] = 0;
+    UserCom_DataAnl(user_data_temp, 4 + _user_data_cnt);
   } else
     state = 0;
 }
@@ -89,7 +89,6 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
   static uint32_t uint32_t_temp;
   __IO static int32_t int32_t_temp;
   __IO static double double_temp;
-
   p_data = (uint8_t*)(data_buf + 4);
   option = data_buf[2];
   len = data_buf[3];
@@ -300,5 +299,9 @@ void UserCom_SendEvent(uint8_t event, uint8_t op) {
  * @brief 用户通讯数据发送
  */
 void UserCom_SendData(uint8_t* dataToSend, uint8_t Length) {
-  HAL_UART_Transmit_IT(&USER_COM_UART, dataToSend, Length);
+  // HAL_UART_Transmit_IT(&USER_COM_UART, dataToSend, Length);
+  // DMA
+  if (USER_COM_UART.gState == HAL_UART_STATE_READY &&
+      USER_COM_UART.hdmatx->State == HAL_DMA_STATE_READY)
+    HAL_UART_Transmit_DMA(&USER_COM_UART, dataToSend, Length);
 }

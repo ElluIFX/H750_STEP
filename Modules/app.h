@@ -18,22 +18,24 @@
 
 #define USER_COM_UART huart3
 
-//事件代码
+// 事件代码
 #define USER_EVENT_KEY_SHORT 0x01
 #define USER_EVENT_KEY_LONG 0x02
 #define USER_EVENT_KEY_DOUBLE 0x03
-//事件操作
+// 事件操作
 #define USER_EVENT_OP_SET 0x01
 #define USER_EVENT_OP_CLEAR 0x02
 
-//回传数据结构
+extern uint8_t user_data_temp[128];
+
+// 回传数据结构
 typedef struct {
   uint8_t head1;
   uint8_t head2;
   uint8_t length;
   //
   uint8_t cmd;
-  //data
+  // data
   int32_t step1_speed;
   int32_t step1_angle;
   int32_t step1_target_angle;
@@ -59,6 +61,8 @@ typedef union {
   uint8_t byte_data[47];
   _to_user_st st_data;
 } _to_user_un;
+
+void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len);
 
 void UserCom_GetOneByte(uint8_t data);
 
