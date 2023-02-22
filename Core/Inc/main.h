@@ -66,8 +66,12 @@ void Error_Handler(void);
 #define LED_B_GPIO_Port GPIOC
 #define KEY_Pin GPIO_PIN_2
 #define KEY_GPIO_Port GPIOA
-#define STEP_DIR_Pin GPIO_PIN_8
-#define STEP_DIR_GPIO_Port GPIOE
+#define STEP1_DIR_Pin GPIO_PIN_8
+#define STEP1_DIR_GPIO_Port GPIOE
+#define STEP3_DIR_Pin GPIO_PIN_7
+#define STEP3_DIR_GPIO_Port GPIOC
+#define STEP2_DIR_Pin GPIO_PIN_0
+#define STEP2_DIR_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 #define _MSC_VER

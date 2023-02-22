@@ -24,7 +24,7 @@
 #define STEP_TIM_BASE_CLK 240000000  // 定时器时钟频率
 #define STEP_PWM_MAX_FREQ 20000      // PWM最大频率(防止丢步)
 // 从定时器 16bit=65535 32bit=4294967295
-#define STEP_SLAVE_TIM_MAX_CNT 4294967295
+#define STEP_SLAVE_TIM_MAX_CNT 65535
 
 /****************** 数据类型定义 ******************/
 

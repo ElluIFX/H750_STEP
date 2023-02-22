@@ -59,17 +59,23 @@ void delay_us(uint16_t us) {
  * @brief control RGB led
  * @param uint8_t RGBstat
  * @retval None
- * @note RGBstat = 0x00, RGB off, RGBstat = 0x01, R on, RGBstat = 0xff, ignore
+ * @note RGBstat: 0x00=off, 0x01=on, 0x02=reverse. 0xff=ignore
  **/
 void RGB(uint8_t R, uint8_t G, uint8_t B) {
-  if (R != 0xff)
+  if (R <= 1)
     HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin,
                       R ? GPIO_PIN_RESET : GPIO_PIN_SET);
-  if (G != 0xff)
+  else if (R == 2)
+    HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+  if (G <= 1)
     HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin,
                       G ? GPIO_PIN_RESET : GPIO_PIN_SET);
-  if (B != 0xff)
+  else if (G == 2)
+    HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
+  if (B <= 1)
     HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin,
                       B ? GPIO_PIN_RESET : GPIO_PIN_SET);
+  else if (B == 2)
+    HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
 }
 #endif  // _RGB_LED_USED_

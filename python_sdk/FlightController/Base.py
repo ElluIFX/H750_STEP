@@ -30,9 +30,9 @@ class Byte_Var:
 
     def __init__(self, ctype="u8", var_type=int, value_multiplier=1):
         """Args:
-            ctype (str): C-like类型(如u8, u16, u32, s8, s16, s32)
-            py_var_type (_type_): python类型(如int, float)
-            value_multiplier (int, optional): 值在从byte向python转换时的乘数. Defaults to 1.
+        ctype (str): C-like类型(如u8, u16, u32, s8, s16, s32)
+        py_var_type (_type_): python类型(如int, float)
+        value_multiplier (int, optional): 值在从byte向python转换时的乘数. Defaults to 1.
         """
         self.reset(0, ctype, var_type, value_multiplier)
 
@@ -132,9 +132,16 @@ class FC_State_Struct:
     step2_rotating = Byte_Var("u8", bool)  # bool
     step2_dir = Byte_Var("u8", int)  # 0:逆时针 1:顺时针
 
+    step3_speed = Byte_Var("s32", float, 0.01)  # deg/s
+    step3_angle = Byte_Var("s32", float, 0.001)  # deg
+    step3_target_angle = Byte_Var("s32", float, 0.001)  # deg
+    step3_rotating = Byte_Var("u8", bool)  # bool
+    step3_dir = Byte_Var("u8", int)  # 0:逆时针 1:顺时针
+
     RECV_ORDER = [  # 数据包顺序
         step1_speed,step1_angle,step1_target_angle,step1_rotating,step1_dir,
         step2_speed,step2_angle,step2_target_angle,step2_rotating,step2_dir,
+        step3_speed,step3_angle,step3_target_angle,step3_rotating,step3_dir,
     ]  # fmt: skip
 
     def __init__(self):

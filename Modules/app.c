@@ -80,7 +80,6 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
   static uint8_t suboption;
   static uint8_t recv_check;
   static uint8_t calc_check;
-  static uint8_t led_cnt = 0;
   static uint8_t len;
   static uint8_t* p_data;
   static int16_t* p_int16_t;
@@ -103,7 +102,7 @@ void UserCom_DataAnl(uint8_t* data_buf, uint8_t data_len) {
     LOG_E("[COM] checksum ERR");
     return;
   }
-  RGB(0xff, 0xff, led_cnt++ % 2 == 0);
+  RGB(0xff, 0xff, 0x02);
   switch (option) {
     case 0x00:  // 心跳包
       if (p_data[0] == 0x01) {
@@ -240,6 +239,12 @@ void UserCom_DataExchange(void) {
   to_user_data.st_data.step2_target_angle = step_2.angleTarget * 1000;
   to_user_data.st_data.step2_rotating = step_2.rotating;
   to_user_data.st_data.step2_dir = step_2.dir;
+
+  to_user_data.st_data.step3_speed = step_3.speed * 100;
+  to_user_data.st_data.step3_angle = Step_Get_Angle(&step_3) * 1000;
+  to_user_data.st_data.step3_target_angle = step_3.angleTarget * 1000;
+  to_user_data.st_data.step3_rotating = step_3.rotating;
+  to_user_data.st_data.step3_dir = step_3.dir;
 
   // 校验和
   to_user_data.st_data.check_sum = 0;

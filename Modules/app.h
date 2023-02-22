@@ -45,12 +45,18 @@ typedef struct {
   int32_t step2_target_angle;
   uint8_t step2_rotating;
   uint8_t step2_dir;
+
+  int32_t step3_speed;
+  int32_t step3_angle;
+  int32_t step3_target_angle;
+  uint8_t step3_rotating;
+  uint8_t step3_dir;
   //
   uint8_t check_sum;
 } __attribute__((__packed__)) _to_user_st;
 
 typedef union {
-  uint8_t byte_data[33];
+  uint8_t byte_data[47];
   _to_user_st st_data;
 } _to_user_un;
 
