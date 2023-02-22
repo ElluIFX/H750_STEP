@@ -148,7 +148,10 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
  * @param  step             步进电机控制结构体
  * @param  angle            角度(单位:度)
  */
-void Step_Set_Angle(step_ctrl_t *step, double angle) { step->angle = angle; }
+void Step_Set_Angle(step_ctrl_t *step, double angle) {
+  step->angle = angle;
+  step->angleTarget = angle;
+}
 
 /**
  * @brief 旋转步进电机到指定角度
