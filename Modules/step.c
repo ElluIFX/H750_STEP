@@ -149,6 +149,7 @@ void Step_Rotate(step_ctrl_t *step, double angle) {
  * @param  angle            角度(单位:度)
  */
 void Step_Set_Angle(step_ctrl_t *step, double angle) {
+  ASSERT(!step->rotating, "[STEP] In busy", return);
   step->angle = angle;
   step->angleTarget = angle;
 }
