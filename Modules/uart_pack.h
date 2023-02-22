@@ -34,7 +34,7 @@
 #define _UART_SEND_BUFFER_SIZE 256  // 串口发送缓冲区大小
 #define _RX_DEFAILT_TIMEOUT 10
 #define _RX_DEFAILT_ENDBIT '\n'
-#define _UART_SEND_TIMEOUT 1000  // 串口发送超时时间
+#define _UART_SEND_TIMEOUT 100  // 串口发送超时时间
 #define _UART_PRINT_SAFE 1  // 超时后永久关闭Printf避免主程序卡死
 #define _UART_PRINT_PINGPONG 1  // 是否使用双缓冲区
 #define _UART_PRINT_DMA 1       // 是否使用DMA发送
