@@ -371,10 +371,17 @@ class FC_Base_Uart_Comunication(object):
                     if self.connected:
                         self.connected = False
                         logger.warning("[FC] Disconnected")
+                pop_list = []
                 for ack, recv_time in self._recivied_ack_dict.items():  # 超时ACK清理
                     if recv_time is not None and time.perf_counter() - recv_time > 0.5:
-                        self._recivied_ack_dict.pop(ack)
-                        logger.warning("[FC] Removed an unrecognized ACK")
+                        pop_list.append(ack)
+                if len(pop_list) > 0:
+                    logger.warning(f"[FC] Removed {len(pop_list)} unrecognized ACK")
+                    for ack in pop_list:
+                        try:
+                            self._recivied_ack_dict.pop(ack)
+                        except:
+                            pass
                 time.sleep(0.001)  # 降低CPU占用
             except Exception as e:
                 logger.error(f"[FC] listen serial exception: {traceback.format_exc()}")
@@ -416,6 +423,8 @@ class FC_Base_Uart_Comunication(object):
             logger.error(f"[FC] Update event exception: {traceback.format_exc()}")
 
     def _print_state(self):
+        import re
+
         RED = "\033[1;31m"
         GREEN = "\033[1;32m"
         YELLOW = "\033[1;33m"
@@ -423,18 +432,45 @@ class FC_Base_Uart_Comunication(object):
         CYAN = "\033[1;36m"
         PURPLE = "\033[1;35m"
         RESET = "\033[0m"
-        text = ""
-        text += " ".join(
-            # var.name[0]+var.name[4:7]
-            [
-                f"{YELLOW}{((var.name[0]+var.name[4:7]))}: {f'{GREEN}√ ' if var.value else f'{RED}x {RESET}'}"
-                if type(var.value) == bool
-                else (
-                    f"{YELLOW}{((var.name[0]+var.name[4:7]))}:{CYAN}{var.value:^7.02f}{RESET}"
-                    if type(var.value) == float
-                    else f"{YELLOW}{((var.name[0]+var.name[4:7]))}:{CYAN}{var.value:^4d}{RESET}"
-                )
-                for var in self.state.RECV_ORDER
-            ]
-        )
-        print(f"\r {text}\r", end="")
+        BACK = "\033[F"
+        LINELIMIT = 100  # 每行最多显示的字符数
+        LOG_SPACE = 3  # 为日志留出的空间
+        BOXCOLOR = BLUE
+        HEAD = f"{BOXCOLOR}| {RESET}"
+        TAIL = f"{BOXCOLOR} |{RESET}"
+        lines = [
+            BOXCOLOR
+            + "-" * ((LINELIMIT - 32) // 2)
+            + f" ▲ System log / ▼ System status "
+            + "-" * ((LINELIMIT - 32) // 2)
+            + RESET,
+            HEAD,
+        ]
+
+        def remove_color(text):
+            return re.sub(r"\033\[[0-9;]*m", "", text)
+
+        def len_s(text):
+            return len(remove_color(text))
+
+        varlist = [
+            f"{YELLOW}{var.name}: {f'{GREEN}√ ' if var.value else f'{RED}x {RESET}'}"
+            if type(var.value) == bool
+            else (
+                f"{YELLOW}{var.name}:{CYAN}{var.value:^7.02f}{RESET}"
+                if type(var.value) == float
+                else f"{YELLOW}{var.name}:{CYAN}{var.value:^4d}{RESET}"
+            )
+            for var in self.state.RECV_ORDER
+        ]
+        for vartext in varlist:
+            if len_s(lines[-1]) + len_s(vartext) > LINELIMIT - 2:
+                lines[-1] += " " * (LINELIMIT - len_s(lines[-1]) - 2) + TAIL
+                lines.append(HEAD)
+            lines[-1] += vartext
+        lines[-1] += " " * (LINELIMIT - len_s(lines[-1]) - 2) + TAIL
+        lines.append(f"{BOXCOLOR}{'-' * LINELIMIT}{RESET}")
+        for _ in range(LOG_SPACE):
+            lines.insert(0, " " * LINELIMIT)
+        text = "\n".join(lines) + BACK * (len(lines) - 1)
+        print(text, end="")
