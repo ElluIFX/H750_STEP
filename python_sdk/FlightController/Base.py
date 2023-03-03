@@ -238,6 +238,7 @@ class FC_Settings_Struct:
     ack_max_retry = 3  # 应答失败最大重发次数
     action_log_output = True  # 是否输出动作日志
     strict_ack_check = True  # 当ACK帧校验失败时抛出异常
+    check_idle = True  # 检查电机空闲状态
 
 
 class FC_Base_Uart_Comunication(object):

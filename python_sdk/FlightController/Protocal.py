@@ -43,6 +43,8 @@ class FC_Protocol(FC_Base_Uart_Comunication):
         return ret
 
     def _check_idle(self, motor: int):
+        if not self.settings.check_idle:
+            return
         if not self.step_idle(motor):
             raise Exception(f"Step {motor} is not idle")
 
