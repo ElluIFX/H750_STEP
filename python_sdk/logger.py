@@ -40,7 +40,7 @@ class log:
         self.logger.fileHdl = logging.FileHandler(logFile, encoding="utf-8")
         self.logger.consoleHdl = logging.StreamHandler()
         self.logger.fileHdl.setLevel(logging.DEBUG)
-        self.logger.consoleHdl.setLevel(logging.DEBUG)
+        self.logger.consoleHdl.setLevel(logging.INFO)
         self.logger.fileHdl.setFormatter(fmtFile)
         self.logger.consoleHdl.setFormatter(fmtConsole)
         self.logger.addHandler(self.logger.fileHdl)
